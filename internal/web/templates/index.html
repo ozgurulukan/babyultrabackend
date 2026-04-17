@@ -1,0 +1,2756 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubsie Api — Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"
+            integrity="sha384-sEVIly94UBRLKWdkYoPpSG7GD/e79YHMrxVyZaOk712Ga7+EAw6w1EFi+xBzBdd+" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"
+            integrity="sha384-EkqK+ezBWJuvO3hfrSx2iVqr3YQbhmnzn8kPhOpBZ+0GMVU5oGSgptwIu8D84HjE" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.11/dist/cdn.min.js"
+            integrity="sha384-WPtu0YHhJ3arcykfnv1JgUffWDSKRnqnDeTpJUbOc2os2moEmLkIdaeR0trPN4be" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+            integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .stat-card { transition: transform 0.15s ease; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e1b4b; }
+        ::-webkit-scrollbar-thumb { background: #4338ca; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+<div x-data="adminApp()" x-init="init()" x-cloak>
+
+    <!-- Loading Screen (prevents flash) -->
+    <div x-show="initializing" class="min-h-screen flex items-center justify-center">
+        <div class="text-center">
+            <div class="w-10 h-10 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-gray-500 text-sm">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Forbidden Screen -->
+    <div x-show="forbidden && !initializing" class="min-h-screen flex items-center justify-center">
+        <div class="bg-gray-900 border border-red-800 rounded-2xl p-8 w-full max-w-md text-center shadow-2xl">
+            <div class="w-16 h-16 bg-red-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+            </div>
+            <h1 class="text-2xl font-bold text-red-400 mb-2">Access denied</h1>
+            <p class="text-gray-400 mb-2" x-text="'Only admins can access this panel.'"></p>
+            <p class="text-sm text-gray-500 mb-6" x-text="'Signed in as: ' + (user?.email || '—')"></p>
+            <button @click="signOut()" class="px-6 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition">Sign out</button>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div x-show="!authenticated && !initializing && !forbidden" class="min-h-screen flex items-center justify-center">
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-md text-center shadow-2xl">
+            <div class="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <h1 class="text-2xl font-bold mb-2">Bubsie Api</h1>
+            <p class="text-gray-400 mb-8">Sign in to access the admin panel</p>
+
+            <button @click="signInWithGoogle()"
+                class="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-semibold py-3 px-6 rounded-xl hover:bg-gray-100 transition">
+                <svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                Sign in with Google
+            </button>
+
+            <div x-show="loginError" class="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm" x-text="loginError"></div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div x-show="authenticated && !initializing && !forbidden" class="flex min-h-screen">
+
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-900 border-r border-gray-800 flex flex-col fixed h-full">
+            <div class="p-6 border-b border-gray-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-sm">Bubsie Api</h2>
+                        <p class="text-xs text-gray-500">Admin Panel</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 p-4 space-y-1">
+                <template x-for="t in tabs" :key="t.id">
+                    <button @click="tab = t.id"
+                        :class="tab === t.id ? 'bg-brand-600/20 text-brand-400 border-brand-500' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800 border-transparent'"
+                        class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium border-l-2 transition-all">
+                        <span x-html="t.icon"></span>
+                        <span x-text="t.label"></span>
+                    </button>
+                </template>
+            </nav>
+
+            <div class="p-4 border-t border-gray-800">
+                <div class="flex items-center gap-3 mb-3">
+                    <img :src="user?.photoURL || ''" class="w-8 h-8 rounded-full bg-gray-700" referrerpolicy="no-referrer">
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium truncate" x-text="user?.displayName || 'Admin'"></p>
+                        <p class="text-xs text-gray-500 truncate" x-text="user?.email || ''"></p>
+                    </div>
+                </div>
+                <button @click="signOut()" class="w-full text-xs text-gray-500 hover:text-red-400 py-1.5 transition">Sign out</button>
+            </div>
+        </aside>
+
+        <!-- Content -->
+        <main class="flex-1 ml-64 p-8">
+
+            <!-- Dashboard Tab -->
+            <div x-show="tab === 'dashboard'" class="fade-in">
+                <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
+
+                <div x-show="loading.stats" class="flex justify-center py-20">
+                    <div class="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+
+                <div x-show="!loading.stats">
+                    <!-- Stat Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <div class="stat-card bg-gray-900 border border-gray-800 rounded-xl p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-gray-400 text-sm">Total users</span>
+                                <div class="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                                </div>
+                            </div>
+                            <p class="text-3xl font-bold" x-text="stats?.users?.total ?? '—'"></p>
+                        </div>
+
+                        <div class="stat-card bg-gray-900 border border-gray-800 rounded-xl p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-gray-400 text-sm">Revenue (MRR)</span>
+                                <div class="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </div>
+                            </div>
+                            <p class="text-3xl font-bold">$<span x-text="stats?.revenue?.mrr?.toFixed(2) ?? '0.00'"></span></p>
+                            <p class="text-xs text-gray-500 mt-1">Active subs: <span x-text="stats?.revenue?.active_subscriptions ?? 0"></span></p>
+                        </div>
+
+                        <div class="stat-card bg-gray-900 border border-gray-800 rounded-xl p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-gray-400 text-sm">Requests today</span>
+                                <div class="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                                </div>
+                            </div>
+                            <p class="text-3xl font-bold" x-text="stats?.today_requests ?? 0"></p>
+                        </div>
+
+                        <div class="stat-card bg-gray-900 border border-gray-800 rounded-xl p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-gray-400 text-sm">Total requests</span>
+                                <div class="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+                                </div>
+                            </div>
+                            <p class="text-3xl font-bold" x-text="stats?.total_requests ?? 0"></p>
+                        </div>
+                    </div>
+
+                    <!-- Provider Usage Chart -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                        <h3 class="font-semibold mb-4">Provider usage</h3>
+                        <div class="h-64">
+                            <canvas id="providerChart"></canvas>
+                        </div>
+                        <div x-show="!stats?.provider_usage?.length" class="text-center text-gray-500 py-8">
+                            No data yet
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div x-show="tab === 'users'" class="fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">User management</h1>
+                    <div class="flex items-center gap-3">
+                        <input x-model="usersMeta.search" @keyup.enter="searchUsers()" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none w-64" placeholder="E-posta veya isim ara...">
+                        <button @click="searchUsers()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition">Ara</button>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">View users, edit credits, and manage Pro/subscription status.</p>
+
+                <!-- Edit User Modal -->
+                <div x-show="editingUser" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="editingUser = null">
+                    <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                        <h2 class="text-xl font-bold mb-2">Edit user</h2>
+                        <div class="flex items-center gap-3 mb-5">
+                            <img :src="editingUser?.photo_url || ''" class="w-10 h-10 rounded-full bg-gray-700" referrerpolicy="no-referrer" onerror="this.style.display='none'">
+                            <div>
+                                <p class="text-sm font-medium" x-text="editingUser?.name || '—'"></p>
+                                <p class="text-xs text-gray-400" x-text="editingUser?.email"></p>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Kredi</label>
+                                <input x-model.number="editingUser.credits" type="number" min="0" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                            </div>
+                            <div class="flex items-center gap-6">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="editingUser.is_pro" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                    <span class="text-sm">Pro Subscription</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="editingUser.is_banned" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-red-600">
+                                    <span class="text-sm text-red-400">Banned</span>
+                                </label>
+                            </div>
+                            <div x-show="editingUser?.is_banned">
+                                <label class="block text-xs text-gray-400 mb-1">Ban reason</label>
+                                <input x-model="editingUser.ban_reason" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Abuse, spam, etc.">
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button @click="editingUser = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
+                            <button @click="saveUser()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="!userList.length" class="text-center text-gray-500 py-16 bg-gray-900 border border-gray-800 rounded-xl">
+                    <p>No users yet</p>
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden" x-show="userList.length">
+                    <table class="w-full text-sm">
+                        <thead class="border-b border-gray-800 bg-gray-900/50">
+                            <tr>
+                                <th class="text-left px-4 py-3 text-xs text-gray-400 font-medium">User</th>
+                                <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Credits</th>
+                                <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Status</th>
+                                <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Usage</th>
+                                <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Created</th>
+                                <th class="text-right px-4 py-3 text-xs text-gray-400 font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="u in userList" :key="u.id">
+                                <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition">
+                                    <td class="px-4 py-3">
+                                        <div class="flex items-center gap-3">
+                                            <img :src="u.photo_url || ''" class="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 object-cover" referrerpolicy="no-referrer" onerror="this.style.display='none'">
+                                            <div class="min-w-0">
+                                                <p class="font-medium truncate text-sm" :class="u.is_banned ? 'text-red-400 line-through' : ''" x-text="u.name || '—'"></p>
+                                                <p class="text-xs text-gray-500 truncate" x-text="u.email"></p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="font-mono font-semibold" :class="u.credits > 0 ? 'text-green-400' : 'text-red-400'" x-text="u.credits"></span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span x-show="u.is_banned" class="px-2 py-0.5 rounded text-[10px] font-medium bg-red-500/10 text-red-400">ENGEL</span>
+                                        <span x-show="!u.is_banned" class="px-2 py-0.5 rounded text-[10px] font-medium" :class="u.is_pro ? 'bg-yellow-500/10 text-yellow-400' : 'bg-gray-700 text-gray-500'" x-text="u.is_pro ? 'PRO' : 'FREE'"></span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-gray-400" x-text="u.total_usage"></td>
+                                    <td class="px-4 py-3 text-center text-xs text-gray-500" x-text="formatDate(u.created_at)"></td>
+                                    <td class="px-4 py-3 text-right space-x-1">
+                                        <button @click="toggleBanUser(u)" class="px-2 py-1 rounded-lg text-xs font-medium transition" :class="u.is_banned ? 'bg-green-600/20 hover:bg-green-600/30 text-green-400' : 'bg-red-600/20 hover:bg-red-600/30 text-red-400'" x-text="u.is_banned ? 'Unban' : 'Ban'"></button>
+                                        <button @click="openEditUser(u)" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition">Edit</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex items-center justify-between mt-4" x-show="usersMeta.total > 0">
+                    <p class="text-sm text-gray-500">Total <span x-text="usersMeta.total"></span> users</p>
+                    <div class="flex gap-2">
+                        <button @click="usersMeta.page--; fetchUsers()" :disabled="usersMeta.page <= 1" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Previous</button>
+                        <button @click="usersMeta.page++; fetchUsers()" :disabled="usersMeta.page * usersMeta.limit >= usersMeta.total" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Tab -->
+            <div x-show="tab === 'revenue'" class="fade-in" x-init="$watch('tab', v => { if(v === 'revenue') { fetchRevenueDetailed(); } })">
+                <h1 class="text-2xl font-bold mb-6">Revenue & usage analytics</h1>
+
+                <div x-show="loading.revenue" class="flex justify-center py-20">
+                    <div class="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+
+                <div x-show="!loading.revenue && revenueData">
+                    <!-- Revenue Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">MRR</p>
+                            <p class="text-xl font-bold text-green-400">$<span x-text="revenueData?.revenuecat?.mrr?.toFixed(2) ?? '0.00'"></span></p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">Total revenue</p>
+                            <p class="text-xl font-bold text-green-400">$<span x-text="revenueData?.revenuecat?.revenue?.toFixed(2) ?? '0.00'"></span></p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">Active subs</p>
+                            <p class="text-xl font-bold text-blue-400" x-text="revenueData?.revenuecat?.active_subscriptions ?? 0"></p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">Trials</p>
+                            <p class="text-xl font-bold text-purple-400" x-text="revenueData?.revenuecat?.trial_count ?? 0"></p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">Pro users</p>
+                            <p class="text-xl font-bold text-yellow-400" x-text="revenueData?.users?.pro ?? 0"></p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">Total users</p>
+                            <p class="text-xl font-bold" x-text="revenueData?.users?.total ?? 0"></p>
+                        </div>
+                    </div>
+
+                    <!-- Usage Stats -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">Today</p>
+                            <p class="text-2xl font-bold text-brand-400" x-text="revenueData?.usage?.today ?? 0"></p>
+                            <p class="text-[10px] text-gray-500 mt-1">requests</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">This week</p>
+                            <p class="text-2xl font-bold text-brand-400" x-text="revenueData?.usage?.this_week ?? 0"></p>
+                            <p class="text-[10px] text-gray-500 mt-1">requests</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">This month</p>
+                            <p class="text-2xl font-bold text-brand-400" x-text="revenueData?.usage?.this_month ?? 0"></p>
+                            <p class="text-[10px] text-gray-500 mt-1">requests</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">Last month</p>
+                            <p class="text-2xl font-bold text-gray-300" x-text="revenueData?.usage?.last_month ?? 0"></p>
+                            <p class="text-[10px] text-gray-500 mt-1">requests</p>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                            <p class="text-xs text-gray-400 mb-1">This year</p>
+                            <p class="text-2xl font-bold text-gray-300" x-text="revenueData?.usage?.this_year ?? 0"></p>
+                            <p class="text-[10px] text-gray-500 mt-1">requests</p>
+                        </div>
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                        <h3 class="font-semibold mb-4">Last 30 days usage</h3>
+                        <div class="h-72">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                        <div x-show="!revenueData?.chart_data?.length" class="text-center text-gray-500 py-8">
+                            No data yet
+                        </div>
+                    </div>
+
+                    <!-- User Breakdown -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                            <h3 class="font-semibold mb-4">User breakdown</h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-400">Pro users</span>
+                                    <span class="font-mono font-bold text-yellow-400" x-text="revenueData?.users?.pro ?? 0"></span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-2">
+                                    <div class="bg-yellow-500 h-2 rounded-full transition-all" :style="`width: ${revenueData?.users?.total ? (revenueData.users.pro / revenueData.users.total * 100) : 0}%`"></div>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-400">Free users</span>
+                                    <span class="font-mono font-bold text-gray-300" x-text="revenueData?.users?.free ?? 0"></span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-2">
+                                    <div class="bg-gray-500 h-2 rounded-full transition-all" :style="`width: ${revenueData?.users?.total ? (revenueData.users.free / revenueData.users.total * 100) : 0}%`"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                            <h3 class="font-semibold mb-4">RevenueCat Status</h3>
+                            <div class="space-y-3 text-sm">
+                                <div class="flex justify-between"><span class="text-gray-400">MRR</span><span class="font-mono text-green-400">$<span x-text="revenueData?.revenuecat?.mrr?.toFixed(2) ?? '0.00'"></span></span></div>
+                                <div class="flex justify-between"><span class="text-gray-400">Total revenue</span><span class="font-mono text-green-400">$<span x-text="revenueData?.revenuecat?.revenue?.toFixed(2) ?? '0.00'"></span></span></div>
+                                <div class="flex justify-between"><span class="text-gray-400">Active subs</span><span class="font-mono" x-text="revenueData?.revenuecat?.active_subscriptions ?? 0"></span></div>
+                                <div class="flex justify-between"><span class="text-gray-400">Active trials</span><span class="font-mono" x-text="revenueData?.revenuecat?.trial_count ?? 0"></span></div>
+                                <div class="flex justify-between"><span class="text-gray-400">Last updated</span><span class="text-xs text-gray-500" x-text="revenueData?.revenuecat?.last_updated ? new Date(revenueData.revenuecat.last_updated).toLocaleString('en-US') : '—'"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Providers Tab -->
+            <div x-show="tab === 'providers'" class="fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">Provider management</h1>
+                    <button @click="healthCheckAll()" :disabled="loading.health"
+                        class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                        <svg class="w-4 h-4" :class="loading.health && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Run all health checks
+                    </button>
+                </div>
+
+                <p class="text-sm text-gray-500 mb-6">API keys are managed via Coolify ENV. You can enable/disable providers and run tests here.</p>
+
+                <div class="grid gap-4">
+                    <template x-for="p in providerList" :key="p.name">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold"
+                                        :class="p.enabled && p.configured ? (p.status === 'active' ? 'bg-green-500/10 text-green-400' : p.status === 'error' ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400') : 'bg-gray-800 text-gray-500'"
+                                        x-text="p.name.charAt(0).toUpperCase()">
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold flex items-center gap-2">
+                                            <span x-text="p.name"></span>
+                                            <span x-show="p.configured" class="px-1.5 py-0.5 bg-green-500/10 text-green-400 rounded text-[10px] font-medium">KEY SET</span>
+                                            <span x-show="!p.configured" class="px-1.5 py-0.5 bg-yellow-500/10 text-yellow-400 rounded text-[10px] font-medium">NO KEY</span>
+                                        </h3>
+                                        <p class="text-sm" :class="p.status === 'active' ? 'text-green-400' : p.status === 'error' ? 'text-red-400' : 'text-gray-500'" x-text="p.message"></p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-3">
+                                    <button @click="testProvider(p.name)" x-show="p.configured"
+                                        class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition">
+                                        Test
+                                    </button>
+
+                                    <!-- Toggle -->
+                                    <button @click="toggleProvider(p)" class="relative w-12 h-6 rounded-full transition-colors"
+                                        :class="p.enabled ? 'bg-brand-600' : 'bg-gray-700'">
+                                        <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform"
+                                            :class="p.enabled ? 'translate-x-6' : 'translate-x-0'"></span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div x-show="!p.configured" class="mt-3 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
+                                <p class="text-xs text-yellow-400">To use this provider, add <code class="bg-gray-800 px-1 rounded" x-text="p.envKey"></code> to your Coolify ENV.</p>
+                            </div>
+
+
+
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Logs Tab -->
+            <div x-show="tab === 'logs'" class="fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">Request logs</h1>
+                    <button @click="fetchLogs()" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Refresh
+                    </button>
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-800/50">
+                                <tr>
+                                    <th class="text-left px-4 py-3 font-medium text-gray-400">Date</th>
+                                    <th class="text-left px-4 py-3 font-medium text-gray-400">Provider</th>
+                                    <th class="text-left px-4 py-3 font-medium text-gray-400">Model</th>
+                                    <th class="text-left px-4 py-3 font-medium text-gray-400">Prompt</th>
+                                    <th class="text-left px-4 py-3 font-medium text-gray-400">Status</th>
+                                    <th class="text-left px-4 py-3 font-medium text-gray-400">Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800">
+                                <template x-for="log in logs" :key="log.id">
+                                    <tr class="hover:bg-gray-800/30 transition">
+                                        <td class="px-4 py-3 text-gray-300 whitespace-nowrap" x-text="formatDate(log.created_at)"></td>
+                                        <td class="px-4 py-3">
+                                            <span class="px-2 py-0.5 bg-brand-500/10 text-brand-400 rounded text-xs font-medium" x-text="log.provider"></span>
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-400 text-xs" x-text="log.model || '—'"></td>
+                                        <td class="px-4 py-3 text-gray-300 max-w-xs truncate" x-text="log.prompt"></td>
+                                        <td class="px-4 py-3">
+                                            <span class="px-2 py-0.5 rounded text-xs font-medium"
+                                                :class="log.status === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'"
+                                                x-text="log.status"></span>
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-400 whitespace-nowrap" x-text="log.duration_ms + 'ms'"></td>
+                                    </tr>
+                                </template>
+                                <tr x-show="!logs.length">
+                                    <td colspan="6" class="px-4 py-12 text-center text-gray-500">No logs yet</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div x-show="logsMeta.total > logsMeta.limit" class="flex items-center justify-between px-4 py-3 border-t border-gray-800">
+                        <p class="text-sm text-gray-500">
+                            Total <span x-text="logsMeta.total"></span> records
+                        </p>
+                        <div class="flex gap-2">
+                            <button @click="logsMeta.page--; fetchLogs()" :disabled="logsMeta.page <= 1"
+                                class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Previous</button>
+                            <button @click="logsMeta.page++; fetchLogs()" :disabled="logsMeta.page * logsMeta.limit >= logsMeta.total"
+                                class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories Tab -->
+            <div x-show="tab === 'categories'" class="fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">Category management</h1>
+                    <button @click="openNewCategory()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        New category
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Categories group templates. Use Translate to generate all languages automatically.</p>
+
+                <!-- Category Type Tabs -->
+                <div class="inline-flex bg-gray-900 border border-gray-800 rounded-xl p-1 mb-6">
+                    <button
+                        @click="setCategoryType('photo')"
+                        :class="categoryTypeTab === 'photo' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Photo
+                    </button>
+                    <button
+                        @click="setCategoryType('video')"
+                        :class="categoryTypeTab === 'video' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Video
+                    </button>
+                </div>
+
+                <!-- Category Form Modal -->
+                <div x-show="categoryForm" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="categoryForm = null">
+                    <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                        <h2 class="text-xl font-bold mb-5" x-text="categoryForm?.id ? 'Edit category' : 'New category'"></h2>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-xs text-gray-400 mb-1">Name *</label>
+                                    <input x-model="categoryForm.name" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Face"></div>
+                                <div><label class="block text-xs text-gray-400 mb-1">Slug</label>
+                                    <input x-model="categoryForm.slug" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="face"></div>
+                            </div>
+                            <div><label class="block text-xs text-gray-400 mb-1">Description</label>
+                                <input x-model="categoryForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-xs text-gray-400 mb-1">Order</label>
+                                    <input x-model.number="categoryForm.sort_order" type="number" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
+                                <div class="flex items-end"><label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="categoryForm.is_active" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                    <span class="text-sm">Active</span></label></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="flex items-end"><label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="categoryForm.is_popular" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                    <span class="text-sm">Popular</span></label></div>
+                                <div class="flex items-end"><label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="categoryForm.is_trending" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                    <span class="text-sm">Trending</span></label></div>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button @click="categoryForm = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
+                            <button @click="saveCategory()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="!categories.length" class="text-center text-gray-500 py-16 bg-gray-900 border border-gray-800 rounded-xl">
+                    <p>No categories yet</p>
+                    <button @click="openNewCategory()" class="mt-3 text-brand-400 hover:text-brand-300 text-sm">Create the first category</button>
+                </div>
+                <div class="grid gap-3">
+                    <template x-for="cat in categories" :key="cat.id">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold flex items-center gap-2">
+                                    <span x-text="cat.name"></span>
+                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-medium" :class="cat.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'" x-text="cat.is_active ? 'ACTIVE' : 'INACTIVE'"></span>
+                                    <span x-show="cat.is_popular" class="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded text-[10px] font-medium">POPULAR</span>
+                                    <span x-show="cat.is_trending" class="px-1.5 py-0.5 bg-orange-500/10 text-orange-400 rounded text-[10px] font-medium">TRENDING</span>
+                                </h3>
+                                <p class="text-xs text-gray-500 mt-1" x-text="'Slug: ' + cat.slug + (cat.description ? ' • ' + cat.description : '')"></p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="translateEntity('category', cat.id)" :disabled="translating['category_'+cat.id]" class="px-2 py-1.5 bg-purple-900/30 hover:bg-purple-900/60 text-purple-400 rounded-lg text-xs font-medium transition disabled:opacity-50" title="Translate to all languages">
+                                    <span x-show="!translating['category_'+cat.id]">🌐 Translate</span>
+                                    <span x-show="translating['category_'+cat.id]" class="animate-pulse">Translating...</span>
+                                </button>
+                                <button @click="editCategory(cat)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition">Edit</button>
+                                <button @click="deleteCategory(cat.id)" class="px-3 py-1.5 bg-red-900/30 hover:bg-red-900/60 text-red-400 rounded-lg text-xs font-medium transition">Delete</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Templates Tab -->
+            <div x-show="tab === 'templates'" class="fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">Template management</h1>
+                    <button @click="openNewTemplate()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Yeni Template
+                    </button>
+                </div>
+                <!-- Template Type Tabs -->
+                <div class="inline-flex bg-gray-900 border border-gray-800 rounded-xl p-1 mb-6">
+                    <button
+                        @click="setTemplateType('photo')"
+                        :class="templateTypeTab === 'photo' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Photo
+                    </button>
+                    <button
+                        @click="setTemplateType('video')"
+                        :class="templateTypeTab === 'video' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Video
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Manage the AI templates shown in the mobile app. Each template includes a prompt, demo media, and provider settings.</p>
+
+                <!-- Template Form Modal -->
+                <div x-show="templateForm" class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-10 overflow-y-auto" @click.self="templateForm = null">
+                    <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-2xl mb-10 shadow-2xl">
+                        <h2 class="text-xl font-bold mb-5" x-text="templateForm?.id ? 'Edit template' : 'New template'"></h2>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Name *</label>
+                                <input x-model="templateForm.name" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Remove Braces">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Slug</label>
+                                <input x-model="templateForm.slug" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="remove-braces">
+                            </div>
+                            <input type="hidden" x-model="templateForm.app_id">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Aksiyon Tipi</label>
+                                <select x-model="templateForm.action_type" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                    <template x-for="at in actionTypes" :key="at.value">
+                                        <option :value="at.value" x-text="at.label"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Kategori</label>
+                                <select x-model.number="templateForm.category_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                    <option value="0">— Kategorisiz —</option>
+                                    <template x-for="cat in getCategoriesForType(templateTypeTab)" :key="cat.id">
+                                        <option :value="cat.id" x-text="cat.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Provider</label>
+                                <select x-model="templateForm.provider" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                    <option value="fal.ai">fal.ai</option>
+                                    <option value="replicate">replicate</option>
+                                    <option value="deepseek">deepseek</option>
+                                    <option value="openrouter">openrouter</option>
+                                    <option value="gemini">gemini</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Reference photos</label>
+                                <select x-model.number="templateForm.reference_image_count" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                    <option :value="1">1 photo</option>
+                                    <option :value="2">2 photos</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Model (optional)</label>
+                                <input x-model="templateForm.model" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="e.g. fal-ai/flux/dev — leave empty for provider default">
+                            </div>
+                        </div>
+
+                        <!-- Aspect Ratio -->
+                        <div class="mt-4">
+                            <label class="block text-xs text-gray-400 mb-1">Default Aspect Ratio</label>
+                            <div class="flex flex-wrap gap-2 mt-1">
+                                <template x-for="r in ['1:1','4:5','9:16','16:9','3:4','4:3']" :key="r">
+                                    <button type="button"
+                                        @click="templateForm.aspect_ratio = r"
+                                        :class="templateForm.aspect_ratio === r ? 'bg-brand-600 border-brand-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'"
+                                        class="px-3 py-1.5 rounded-lg text-xs font-medium border transition" x-text="r">
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="block text-xs text-gray-400 mb-1">Supported Aspect Ratios</label>
+                            <div class="flex flex-wrap gap-2 mt-1">
+                                <template x-for="r in ['1:1','4:5','9:16','16:9','3:4','4:3']" :key="'sup_'+r">
+                                    <button type="button"
+                                        @click="
+                                            let arr = (templateForm.supported_aspect_ratios||'').split(',').filter(x=>x);
+                                            if (arr.includes(r)) { arr = arr.filter(x=>x!==r); } else { arr.push(r); }
+                                            templateForm.supported_aspect_ratios = arr.join(',');
+                                        "
+                                        :class="(templateForm.supported_aspect_ratios||'').split(',').includes(r) ? 'bg-brand-600 border-brand-500 text-white' : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'"
+                                        class="px-3 py-1.5 rounded-lg text-xs font-medium border transition" x-text="r">
+                                    </button>
+                                </template>
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-1">iOS'ta kullaniciya gosterilecek secenekler. En az 1 secili olmali.</p>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="block text-xs text-gray-400 mb-1">Description</label>
+                            <input x-model="templateForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Short user-facing description">
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="block text-xs text-gray-400 mb-1">Prompt *</label>
+                            <textarea x-model="templateForm.prompt" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Remove dental braces from the person's teeth, make teeth look natural and clean..."></textarea>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="block text-xs text-gray-400 mb-1">Negative Prompt</label>
+                            <textarea x-model="templateForm.negative_prompt" rows="2" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="blurry, distorted..."></textarea>
+                        </div>
+
+                        <p class="mt-5 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Before / After Demo <span class="normal-case font-normal text-gray-600">— optional</span></p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Before (Orijinal) <span class="text-gray-600">optional</span></label>
+                                <div class="flex gap-2">
+                                    <input x-model="templateForm.before_media_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="URL or upload">
+                                    <button @click="uploadMediaFor('before_media_url')" :disabled="templateUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                    </button>
+                                </div>
+                                <select x-model="templateForm.before_media_type" class="mt-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs focus:border-brand-500 focus:outline-none">
+                                    <option value="image">Resim</option><option value="video">Video</option>
+                                </select>
+                                <img x-show="templateForm.before_media_url && templateForm.before_media_type==='image'" :src="templateForm.before_media_url" class="mt-2 h-20 rounded-lg object-cover">
+                                <video x-show="templateForm.before_media_url && templateForm.before_media_type==='video'" :src="templateForm.before_media_url" class="mt-2 h-20 rounded-lg" muted playsinline></video>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">After (AI demo result) <span class="text-gray-600">optional</span></label>
+                                <div class="flex gap-2">
+                                    <input x-model="templateForm.after_media_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="URL or upload">
+                                    <button @click="uploadMediaFor('after_media_url')" :disabled="templateUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                    </button>
+                                </div>
+                                <select x-model="templateForm.after_media_type" class="mt-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs focus:border-brand-500 focus:outline-none">
+                                    <option value="image">Resim</option><option value="video">Video</option>
+                                </select>
+                                <img x-show="templateForm.after_media_url && templateForm.after_media_type==='image'" :src="templateForm.after_media_url" class="mt-2 h-20 rounded-lg object-cover">
+                                <video x-show="templateForm.after_media_url && templateForm.after_media_type==='video'" :src="templateForm.after_media_url" class="mt-2 h-20 rounded-lg" muted playsinline></video>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Icon <span class="text-gray-600">optional</span></label>
+                                <div class="flex gap-2">
+                                    <input x-model="templateForm.icon_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="URL or upload">
+                                    <button @click="uploadMediaFor('icon_url')" :disabled="templateUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Kredi Maliyeti</label>
+                                <input x-model.number="templateForm.credit_cost" type="number" min="0" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="block text-xs text-gray-400 mb-1">Provider Params (JSON)</label>
+                            <input x-model="templateForm.params" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder='{"strength": 0.8, "num_inference_steps": 30}'>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Order</label>
+                                <input x-model.number="templateForm.sort_order" type="number" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                            </div>
+                            <div class="flex items-end">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="templateForm.is_active" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                    <span class="text-sm">Active</span>
+                                </label>
+                            </div>
+                            <div class="flex items-end">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="templateForm.is_featured" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                    <span class="text-sm">Featured</span>
+                                </label>
+                            </div>
+                            <div class="flex items-end">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="templateForm.is_premium" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                    <span class="text-sm">Premium</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" x-model="templateForm.hide_from_all" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                <span class="text-sm">Hide from “All”</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">If enabled, this template won’t appear in the app’s “All” templates list, but can still be opened via Quick Buttons or direct linking.</p>
+                        </div>
+
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button @click="templateForm = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
+                            <button @click="saveTemplate()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Cards -->
+                <div x-show="!templates.length" class="text-center text-gray-500 py-16 bg-gray-900 border border-gray-800 rounded-xl">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z"/></svg>
+                    <p>No templates yet</p>
+                    <button @click="openNewTemplate()" class="mt-3 text-brand-400 hover:text-brand-300 text-sm">Create the first template</button>
+                </div>
+
+                <div class="grid gap-4">
+                    <template x-for="t in templates" :key="t.id">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-16 h-16 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
+                                        <img x-show="t.before_media_url && t.before_media_type!=='video'" :src="t.before_media_url" class="w-full h-full object-cover">
+                                        <video x-show="t.before_media_url && t.before_media_type==='video'" :src="t.before_media_url" class="w-full h-full object-cover" muted></video>
+                                        <div x-show="!t.before_media_url" class="w-full h-full flex items-center justify-center text-gray-600 text-xl font-bold" x-text="t.name?.charAt(0)?.toUpperCase()"></div>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold flex items-center gap-2 flex-wrap">
+                                            <span x-text="t.name"></span>
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-medium" :class="t.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'" x-text="t.is_active ? 'ACTIVE' : 'INACTIVE'"></span>
+                                            <span class="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded text-[10px] font-medium" x-text="(t.action_type||'image_generation').replace(/_/g,' ')"></span>
+                                            <span x-show="t.is_featured" class="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded text-[10px] font-medium">FEATURED</span>
+                                            <span x-show="t.is_premium" class="px-1.5 py-0.5 bg-yellow-500/10 text-yellow-400 rounded text-[10px] font-medium">PRO</span>
+                                            <span x-show="t.aspect_ratio" class="px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded text-[10px] font-medium" x-text="t.aspect_ratio || '1:1'"></span>
+                                        </h3>
+                                        <p class="text-sm text-gray-400 mt-0.5" x-text="t.description || t.prompt.substring(0, 80) + '...'"></p>
+                                        <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                                            <span x-text="'Provider: ' + (t.provider || '—')"></span>
+                                            <span x-show="t.category_id" x-text="'Kategori: ' + (allCategories.find(c=>c.id===t.category_id)?.name || t.category_id)"></span>
+                                            <span x-text="'Slug: ' + t.slug" class="text-gray-600"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <button @click="translateEntity('template', t.id)" :disabled="translating['template_'+t.id]" class="px-2 py-1.5 bg-purple-900/30 hover:bg-purple-900/60 text-purple-400 rounded-lg text-xs font-medium transition disabled:opacity-50">
+                                        <span x-show="!translating['template_'+t.id]">🌐 Translate</span><span x-show="translating['template_'+t.id]" class="animate-pulse">...</span>
+                                    </button>
+                                    <button @click="editTemplate(t)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition">Edit</button>
+                                    <button @click="deleteTemplate(t.id)" class="px-3 py-1.5 bg-red-900/30 hover:bg-red-900/60 text-red-400 rounded-lg text-xs font-medium transition">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Slider Tab -->
+            <div x-show="tab === 'slider'" class="fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">Slider management</h1>
+                    <button @click="openNewSlider()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Yeni Slider
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Manage the app’s main slider. You can highlight templates or add special-day frames (PNG overlays) with optional date ranges.</p>
+
+                <!-- Slider Type Tabs -->
+                <div class="inline-flex bg-gray-900 border border-gray-800 rounded-xl p-1 mb-6">
+                    <button
+                        @click="setSliderType('photo')"
+                        :class="sliderTypeTab === 'photo' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Photo
+                    </button>
+                    <button
+                        @click="setSliderType('video')"
+                        :class="sliderTypeTab === 'video' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Video
+                    </button>
+                </div>
+
+                <!-- Quick Buttons (below slider) -->
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-bold">Quick Buttons</h2>
+                            <p class="text-sm text-gray-500 mt-1">4 shortcut buttons shown under the slider in the app (global, English labels).</p>
+                        </div>
+                        <button @click="openNewQuickButton()" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Add Button
+                        </button>
+                    </div>
+
+                    <!-- Quick Button Form Modal -->
+                    <div x-show="quickButtonForm" class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-10 overflow-y-auto" @click.self="quickButtonForm = null">
+                        <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-lg mb-10 shadow-2xl">
+                            <h2 class="text-xl font-bold mb-5" x-text="quickButtonForm?.id ? 'Edit Quick Button' : 'New Quick Button'"></h2>
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Title (EN) *</label>
+                                        <input x-model="quickButtonForm.title" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Remove BG">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Order</label>
+                                        <input x-model.number="quickButtonForm.sort_order" type="number" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Template</label>
+                                    <select x-model.number="quickButtonForm.template_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                        <option value="0">— Select —</option>
+                                        <template x-for="t in templates" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Icon (PNG/SVG URL)</label>
+                                    <div class="flex gap-2">
+                                        <input x-model="quickButtonForm.icon_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="https://cdn.../icon.svg">
+                                        <button @click="uploadQuickButtonIcon()" :disabled="quickButtonUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                        </button>
+                                    </div>
+                                    <img x-show="quickButtonForm.icon_url" :src="quickButtonForm.icon_url" class="mt-2 h-14 w-14 rounded-lg object-contain bg-gray-800 border border-gray-700 p-2">
+                                </div>
+                                <div class="flex items-end">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" x-model="quickButtonForm.is_active" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                        <span class="text-sm">Active</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex justify-end gap-3">
+                                <button @click="quickButtonForm = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
+                                <button @click="saveQuickButton()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <template x-for="b in quickButtons" :key="b.id">
+                            <div class="bg-gray-950/40 border border-gray-800 rounded-xl p-4 flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                        <img x-show="b.icon_url" :src="b.icon_url" class="w-8 h-8 object-contain">
+                                        <span x-show="!b.icon_url" class="text-gray-600 text-xs">ICON</span>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <p class="font-semibold text-sm truncate" x-text="b.title"></p>
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-medium" :class="b.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'" x-text="b.is_active ? 'ON' : 'OFF'"></span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 truncate" x-text="b.template_id ? ('Template #' + b.template_id) : 'No template'"></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <button @click="editQuickButton(b)" class="text-brand-400 hover:text-brand-300 text-xs">Edit</button>
+                                    <button @click="deleteQuickButton(b.id)" class="text-red-400 hover:text-red-300 text-xs">Delete</button>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="!quickButtons.length" class="text-sm text-gray-500 col-span-full">No quick buttons yet.</div>
+                    </div>
+                </div>
+
+                <!-- Slider Form Modal -->
+                <div x-show="sliderForm" class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-10 overflow-y-auto" @click.self="sliderForm = null">
+                    <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-lg mb-10 shadow-2xl">
+                        <h2 class="text-xl font-bold mb-5" x-text="sliderForm?.id ? 'Edit slider' : 'New slider'"></h2>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 gap-4">
+                                <div><label class="block text-xs text-gray-400 mb-1">Linked template</label>
+                                    <select x-model.number="sliderForm.template_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                        <option value="0">— Not linked —</option>
+                                        <template x-for="t in templates" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
+                                    </select></div>
+                            </div>
+                            <div><label class="block text-xs text-gray-400 mb-1">Title</label>
+                                <input x-model="sliderForm.title" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="New Year Special!"></div>
+                            <div><label class="block text-xs text-gray-400 mb-1">Description</label>
+                                <input x-model="sliderForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
+                            <div><label class="block text-xs text-gray-400 mb-1">Slider image</label>
+                                <div class="flex gap-2">
+                                    <input x-model="sliderForm.image_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                    <button @click="uploadSliderMedia('image_url')" :disabled="sliderUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                    </button>
+                                </div>
+                                <img x-show="sliderForm.image_url" :src="sliderForm.image_url" class="mt-2 h-20 rounded-lg object-cover">
+                            </div>
+                            <div><label class="block text-xs text-gray-400 mb-1">Frame (PNG overlay)</label>
+                                <div class="flex gap-2">
+                                    <input x-model="sliderForm.frame_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Transparent PNG">
+                                    <button @click="uploadSliderMedia('frame_url')" :disabled="sliderUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                    </button>
+                                </div>
+                                <img x-show="sliderForm.frame_url" :src="sliderForm.frame_url" class="mt-2 h-20 rounded-lg object-cover bg-gray-800 border border-dashed border-gray-600">
+                            </div>
+                            <div><label class="block text-xs text-gray-400 mb-1">Deep Link</label>
+                                <input x-model="sliderForm.deep_link" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="template://remove-braces"></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-xs text-gray-400 mb-1">Start (optional)</label>
+                                    <input x-model="sliderForm.starts_at" type="datetime-local" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
+                                <div><label class="block text-xs text-gray-400 mb-1">End (optional)</label>
+                                    <input x-model="sliderForm.ends_at" type="datetime-local" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-xs text-gray-400 mb-1">Order</label>
+                                    <input x-model.number="sliderForm.sort_order" type="number" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
+                                <div class="flex items-end"><label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="sliderForm.is_active" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                    <span class="text-sm">Active</span></label></div>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button @click="sliderForm = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
+                            <button @click="saveSlider()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="!sliderItems.length" class="text-center text-gray-500 py-16 bg-gray-900 border border-gray-800 rounded-xl">
+                    <p>No slider items yet</p>
+                    <button @click="openNewSlider()" class="mt-3 text-brand-400 hover:text-brand-300 text-sm">Add the first slider item</button>
+                </div>
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <template x-for="s in sliderItems" :key="s.id">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                            <div class="aspect-[16/9] bg-gray-800 relative">
+                                <img x-show="s.image_url" :src="s.image_url" class="w-full h-full object-cover">
+                                <img x-show="s.frame_url" :src="s.frame_url" class="absolute inset-0 w-full h-full object-contain pointer-events-none">
+                                <div class="absolute top-2 right-2 flex gap-1">
+                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-900/80" :class="s.is_active ? 'text-green-400' : 'text-red-400'" x-text="s.is_active ? 'ACTIVE' : 'INACTIVE'"></span>
+                                    <span x-show="s.frame_url" class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-900/80 text-pink-400">FRAME</span>
+                                </div>
+                            </div>
+                            <div class="p-4">
+                                <h3 class="font-semibold text-sm" x-text="s.title || (s.template_id ? 'Template #' + s.template_id : '(Untitled)')"></h3>
+                                <p class="text-xs text-gray-500 mt-1" x-text="s.description || ''"></p>
+                                <div class="text-xs text-gray-600 mt-1" x-show="s.starts_at || s.ends_at">
+                                    <span x-show="s.starts_at" x-text="'📅 ' + new Date(s.starts_at).toLocaleDateString('tr-TR')"></span>
+                                    <span x-show="s.starts_at && s.ends_at"> → </span>
+                                    <span x-show="s.ends_at" x-text="new Date(s.ends_at).toLocaleDateString('tr-TR')"></span>
+                                </div>
+                                <div class="flex items-center justify-between mt-3">
+                                    <span class="text-xs text-gray-500" x-text="'Order: ' + s.sort_order"></span>
+                                    <div class="flex gap-2">
+                                        <button @click="translateEntity('slider', s.id)" :disabled="translating['slider_'+s.id]" class="text-purple-400 hover:text-purple-300 text-xs">🌐</button>
+                                        <button @click="editSlider(s)" class="text-brand-400 hover:text-brand-300 text-xs">Edit</button>
+                                        <button @click="deleteSlider(s.id)" class="text-red-400 hover:text-red-300 text-xs">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Onboarding Tab -->
+            <div x-show="tab === 'onboarding'" class="fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">Onboarding Medya</h1>
+                    <button @click="openNewOnboarding()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Yeni Medya
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Manage the media shown in the app onboarding screens.</p>
+
+                <!-- Onboarding Form Modal -->
+                <div x-show="onboardingForm" class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-10 overflow-y-auto" @click.self="onboardingForm = null">
+                    <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-lg mb-10 shadow-2xl">
+                        <h2 class="text-xl font-bold mb-5" x-text="onboardingForm?.id ? 'Edit onboarding media' : 'New onboarding media'"></h2>
+
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="hidden" x-model="onboardingForm.app_id">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Tip</label>
+                                    <select x-model="onboardingForm.type" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                        <option value="video">Video</option>
+                                        <option value="image">Image</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Title</label>
+                                <input x-model="onboardingForm.title" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Welcome!">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Description</label>
+                                <input x-model="onboardingForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Bu uygulama ile...">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Medya URL *</label>
+                                <div class="flex gap-2">
+                                    <input x-model="onboardingForm.media_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="URL or upload">
+                                    <button @click="uploadOnboardingMedia('media_url')" :disabled="onboardingUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                        <svg class="w-4 h-4" :class="onboardingUploading && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Thumbnail URL</label>
+                                <div class="flex gap-2">
+                                    <input x-model="onboardingForm.thumbnail_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Opsiyonel">
+                                    <button @click="uploadOnboardingMedia('thumbnail_url')" :disabled="onboardingUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Order</label>
+                                    <input x-model.number="onboardingForm.sort_order" type="number" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                </div>
+                                <div class="flex items-end">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" x-model="onboardingForm.is_active" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600 focus:ring-brand-500">
+                                        <span class="text-sm">Active</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button @click="onboardingForm = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
+                            <button @click="saveOnboarding()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Onboarding Cards -->
+                <div x-show="!onboardingList.length" class="text-center text-gray-500 py-16 bg-gray-900 border border-gray-800 rounded-xl">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p>No onboarding media yet</p>
+                    <button @click="openNewOnboarding()" class="mt-3 text-brand-400 hover:text-brand-300 text-sm">Add the first media</button>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <template x-for="o in onboardingList" :key="o.id">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                            <div class="aspect-video bg-gray-800 relative">
+                                <template x-if="o.type === 'video'">
+                                    <video :src="o.media_url" class="w-full h-full object-cover" muted></video>
+                                </template>
+                                <template x-if="o.type === 'image'">
+                                    <img :src="o.media_url" class="w-full h-full object-cover">
+                                </template>
+                                <div class="absolute top-2 right-2 flex gap-1">
+                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-900/80" :class="o.is_active ? 'text-green-400' : 'text-red-400'" x-text="o.is_active ? 'ACTIVE' : 'INACTIVE'"></span>
+                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-900/80 text-blue-400" x-text="o.type.toUpperCase()"></span>
+                                </div>
+                            </div>
+                            <div class="p-4">
+                                <h3 class="font-semibold text-sm" x-text="o.title || '(Untitled)'"></h3>
+                                <p class="text-xs text-gray-500 mt-1" x-text="o.description || ''"></p>
+                                <div class="flex items-center justify-between mt-3 text-xs text-gray-500">
+                                    <span x-text="'Order: ' + o.sort_order"></span>
+                                    <div class="flex gap-2">
+                                        <button @click="translateEntity('onboarding', o.id)" :disabled="translating['onboarding_'+o.id]" class="text-purple-400 hover:text-purple-300 text-xs">🌐</button>
+                                        <button @click="editOnboarding(o)" class="text-brand-400 hover:text-brand-300">Edit</button>
+                                        <button @click="deleteOnboarding(o.id)" class="text-red-400 hover:text-red-300">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Reviews Tab -->
+            <div x-show="tab === 'reviews'" class="fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">User reviews</h1>
+                    <button @click="openNewReview()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Yeni Yorum
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Manage App Store–style reviews shown during onboarding.</p>
+
+                <!-- Review Form Modal -->
+                <div x-show="reviewForm" class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-10 overflow-y-auto" @click.self="reviewForm = null">
+                    <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-lg mb-10 shadow-2xl">
+                        <h2 class="text-xl font-bold mb-5" x-text="reviewForm?.id ? 'Edit review' : 'New user review'"></h2>
+
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Nickname *</label>
+                                    <input x-model="reviewForm.nickname" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Sarah M.">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Puan</label>
+                                    <div class="flex items-center gap-1 mt-1">
+                                        <template x-for="star in [1,2,3,4,5]" :key="star">
+                                            <button @click="reviewForm.rating = star" class="text-xl transition" :class="star <= reviewForm.rating ? 'text-yellow-400' : 'text-gray-600'">&#9733;</button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Profile photo URL</label>
+                                <div class="flex gap-2">
+                                    <input x-model="reviewForm.photo_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="URL or upload">
+                                    <button @click="uploadReviewPhoto()" :disabled="reviewUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                        <svg class="w-4 h-4" :class="reviewUploading && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Yorum *</label>
+                                <textarea x-model="reviewForm.review" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none resize-none" placeholder="This app is amazing! Seeing my braces removed was incredible..."></textarea>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Order</label>
+                                    <input x-model.number="reviewForm.sort_order" type="number" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                </div>
+                                <div class="flex items-end">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" x-model="reviewForm.is_active" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600 focus:ring-brand-500">
+                                        <span class="text-sm">Active</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button @click="reviewForm = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
+                            <button @click="saveReview()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review Cards -->
+                <div x-show="!reviewList.length" class="text-center text-gray-500 py-16 bg-gray-900 border border-gray-800 rounded-xl">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                    <p>No reviews yet</p>
+                    <button @click="openNewReview()" class="mt-3 text-brand-400 hover:text-brand-300 text-sm">Add the first review</button>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <template x-for="r in reviewList" :key="r.id">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 relative" :class="!r.is_active && 'opacity-50'">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden">
+                                    <img x-show="r.photo_url" :src="r.photo_url" class="w-full h-full object-cover" referrerpolicy="no-referrer" onerror="this.style.display='none'">
+                                    <div x-show="!r.photo_url" class="w-full h-full flex items-center justify-center text-gray-500 text-sm font-bold" x-text="r.nickname?.charAt(0)?.toUpperCase()"></div>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-semibold text-sm truncate" x-text="r.nickname"></p>
+                                    <div class="flex items-center gap-0.5">
+                                        <template x-for="s in 5" :key="s">
+                                            <span class="text-xs" :class="s <= r.rating ? 'text-yellow-400' : 'text-gray-600'">&#9733;</span>
+                                        </template>
+                                    </div>
+                                </div>
+                                <span x-show="!r.is_active" class="px-2 py-0.5 bg-red-500/10 text-red-400 text-[10px] rounded font-medium">Inactive</span>
+                            </div>
+                            <p class="text-sm text-gray-300 leading-relaxed line-clamp-3" x-text="r.review"></p>
+                            <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-800">
+                                <span class="text-xs text-gray-500" x-text="'Order: ' + r.sort_order"></span>
+                                <div class="flex gap-2">
+                                    <button @click="translateEntity('review', r.id)" :disabled="translating['review_'+r.id]" class="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded text-[10px] font-medium transition disabled:opacity-50" x-text="translating['review_'+r.id] ? 'Translating...' : 'Translate'"></button>
+                                    <button @click="editReview(r)" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs transition">Edit</button>
+                                    <button @click="deleteReview(r.id)" class="px-2 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded text-xs transition">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Playground Tab -->
+            <div x-show="tab === 'playground'" class="fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold">Playground</h1>
+                        <p class="text-sm text-gray-500 mt-1">Test templates before publishing. Try different transformation modes.</p>
+                    </div>
+                </div>
+
+                <!-- Mode Selector -->
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <template x-for="mode in playgroundModes" :key="mode.value">
+                        <button @click="pg.mode = mode.value; pg.imageURL = ''; pg.result = null"
+                            :class="pg.mode === mode.value ? 'bg-brand-600 text-white border-brand-500' : 'bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700 hover:text-gray-200'"
+                            class="px-4 py-2 rounded-lg text-sm font-medium border transition">
+                            <span x-text="mode.icon"></span>
+                            <span x-text="mode.label" class="ml-1"></span>
+                        </button>
+                    </template>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Input Panel -->
+                    <div class="space-y-4">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                            <h3 class="font-semibold mb-4">Input</h3>
+
+                            <div class="space-y-4">
+                                <!-- Template Quick Fill -->
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Quick fill (Template)</label>
+                                    <select x-model="pg.templateId" @change="fillPlaygroundFromTemplate()" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                        <option value="0">— Select template —</option>
+                                        <template x-for="t in templates" :key="t.id">
+                                            <option :value="t.id" x-text="t.name + ' (' + (t.action_type || 'image_generation') + ')'"></option>
+                                        </template>
+                                    </select>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Provider</label>
+                                        <select x-model="pg.provider" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                            <option value="">— Provider —</option>
+                                            <template x-for="p in providerList.filter(p => p.configured)" :key="p.name">
+                                                <option :value="p.name" x-text="p.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Model</label>
+                                        <input x-model="pg.model" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="default">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Prompt *</label>
+                                    <textarea x-model="pg.prompt" rows="4" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none resize-none" placeholder="Enter instructions for the AI transformation..."></textarea>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Negative Prompt</label>
+                                    <input x-model="pg.negativePrompt" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="blurred, distorted, low quality...">
+                                </div>
+
+                                <!-- Input Media (visible for image/video/audio modes) -->
+                                <div x-show="pgModeNeedsInput()">
+                                    <label class="block text-xs text-gray-400 mb-1" x-text="pg.mode === 'audio_to_text' ? 'Audio file URL' : 'Input image/video URL'"></label>
+                                    <div class="flex gap-2">
+                                        <input x-model="pg.imageURL" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="URL or upload">
+                                        <button @click="uploadPlaygroundMedia()" :disabled="pg.uploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                            <svg class="w-4 h-4" :class="pg.uploading && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                        </button>
+                                    </div>
+                                    <template x-if="pg.imageURL">
+                                        <div class="mt-2">
+                                            <img x-show="pg.imageURL && !pg.imageURL.endsWith('.mp4') && !pg.imageURL.endsWith('.webm') && !pg.imageURL.endsWith('.mp3') && !pg.imageURL.endsWith('.wav') && !pg.imageURL.endsWith('.ogg') && !pg.imageURL.endsWith('.m4a')" :src="pg.imageURL" class="h-24 rounded-lg object-cover">
+                                            <video x-show="pg.imageURL && (pg.imageURL.endsWith('.mp4') || pg.imageURL.endsWith('.webm'))" :src="pg.imageURL" class="h-24 rounded-lg" muted playsinline></video>
+                                            <div x-show="pg.imageURL && (pg.imageURL.endsWith('.mp3') || pg.imageURL.endsWith('.wav') || pg.imageURL.endsWith('.ogg') || pg.imageURL.endsWith('.m4a'))" class="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2">
+                                                <svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                                <span class="text-xs text-gray-400" x-text="pg.imageURL.split('/').pop()"></span>
+                                                <audio :src="pg.imageURL" controls class="h-6 w-full"></audio>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">Params (JSON)</label>
+                                    <input x-model="pg.params" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder='{"strength": 0.8, "num_inference_steps": 30}'>
+                                </div>
+                            </div>
+
+                            <div class="mt-5 flex gap-3">
+                                <button @click="runPlayground()" :disabled="pg.loading"
+                                    class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition">
+                                    <svg x-show="!pg.loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <svg x-show="pg.loading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    <span x-text="pg.loading ? 'Running...' : 'Run test'"></span>
+                                </button>
+                                <button @click="resetPlayground()" class="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition">
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- History -->
+                        <div x-show="pg.history.length" class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                            <h3 class="font-semibold mb-3">History</h3>
+                            <div class="space-y-2 max-h-64 overflow-y-auto">
+                                <template x-for="(h, i) in pg.history" :key="i">
+                                    <button @click="loadPlaygroundHistory(i)" class="w-full text-left bg-gray-800 hover:bg-gray-700 rounded-lg px-3 py-2 text-xs transition">
+                                        <div class="flex items-center justify-between">
+                                            <span class="font-medium" x-text="h.provider + (h.model ? ' / ' + h.model : '')"></span>
+                                            <span class="text-gray-500" x-text="h.duration_ms + 'ms'"></span>
+                                        </div>
+                                        <p class="text-gray-500 truncate mt-0.5" x-text="h.prompt"></p>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Result Panel -->
+                    <div class="space-y-4">
+                        <div x-show="pg.loading" class="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
+                            <div class="w-10 h-10 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p class="text-gray-400">AI transformation is running...</p>
+                            <p class="text-xs text-gray-500 mt-2">This may take a few minutes</p>
+                        </div>
+
+                        <div x-show="pg.error" class="bg-red-900/20 border border-red-800 rounded-xl p-5">
+                            <h3 class="font-semibold text-red-400 mb-2">Error</h3>
+                            <p class="text-sm text-red-300" x-text="pg.error"></p>
+                        </div>
+
+                        <div x-show="pg.result && !pg.loading" class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-semibold">Result</h3>
+                                <div class="flex items-center gap-3 text-xs text-gray-500">
+                                    <span x-text="pg.result?.provider || ''"></span>
+                                    <span x-show="pg.result?.model" x-text="pg.result?.model || ''"></span>
+                                    <span x-show="pg.resultDuration" class="font-mono text-brand-400" x-text="pg.resultDuration + 'ms'"></span>
+                                </div>
+                            </div>
+
+                            <!-- Text Result (text_to_text, image_to_text, audio_to_text) -->
+                            <div x-show="pg.result && (pg.mode === 'text_to_text' || pg.mode === 'image_to_text' || pg.mode === 'audio_to_text') && pg.result?.metadata" class="bg-gray-800 rounded-lg p-4 max-h-96 overflow-y-auto">
+                                <template x-if="pg.result?.metadata?.choices">
+                                    <p class="text-sm text-gray-300 whitespace-pre-wrap" x-text="pg.result.metadata.choices?.[0]?.message?.content || JSON.stringify(pg.result.metadata, null, 2)"></p>
+                                </template>
+                                <template x-if="!pg.result?.metadata?.choices">
+                                    <pre class="text-xs text-gray-400 whitespace-pre-wrap" x-text="JSON.stringify(pg.result?.metadata, null, 2)"></pre>
+                                </template>
+                            </div>
+
+                            <!-- Text-as-content Result (some providers return text in result_url or metadata) -->
+                            <div x-show="pg.result && (pg.mode === 'image_to_text' || pg.mode === 'audio_to_text') && !pg.result?.result_url && pg.result?.metadata?.output && typeof pg.result.metadata.output === 'string'" class="bg-gray-800 rounded-lg p-4 max-h-96 overflow-y-auto">
+                                <p class="text-sm text-gray-300 whitespace-pre-wrap" x-text="pg.result.metadata.output"></p>
+                            </div>
+
+                            <!-- Audio Result (text_to_audio) -->
+                            <div x-show="pg.result && pg.mode === 'text_to_audio' && pg.result?.result_url" class="rounded-lg overflow-hidden bg-gray-800 p-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-brand-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-6 h-6 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-200">Audio file</p>
+                                        <audio :src="pg.result?.result_url" controls class="w-full h-8 mt-1"></audio>
+                                    </div>
+                                    <a :href="pg.result?.result_url" target="_blank" download class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Image/Video Result (text_to_image, image_to_image, image_to_video, video_to_video) -->
+                            <div x-show="pg.result && (pg.mode === 'text_to_image' || pg.mode === 'image_to_image' || pg.mode === 'image_to_video' || pg.mode === 'video_to_video') && pg.result?.result_url" class="rounded-lg overflow-hidden bg-gray-800">
+                                <a :href="pg.result?.result_url" target="_blank" class="block">
+                                    <img :src="pg.result?.result_url" class="w-full max-h-[500px] object-contain" @error="$el.style.display='none'">
+                                </a>
+                                <div class="p-3 flex items-center justify-between">
+                                    <span class="text-xs text-gray-500 truncate" x-text="pg.result?.result_url"></span>
+                                    <a :href="pg.result?.result_url" target="_blank" class="text-xs text-brand-400 hover:text-brand-300">Full size</a>
+                                </div>
+                            </div>
+
+                            <!-- Metadata -->
+                            <details x-show="pg.result?.metadata" class="mt-4">
+                                <summary class="text-xs text-gray-500 cursor-pointer hover:text-gray-300">Raw response (metadata)</summary>
+                                <pre class="mt-2 bg-gray-800 rounded-lg p-3 text-xs text-gray-400 overflow-x-auto max-h-48" x-text="JSON.stringify(pg.result?.metadata, null, 2)"></pre>
+                            </details>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div x-show="!pg.result && !pg.loading && !pg.error" class="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                            <p class="text-gray-500 mb-1">No tests yet</p>
+                            <p class="text-xs text-gray-600">Pick a mode on the left and run a test</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <!-- Notifications Tab -->
+            <div x-show="tab === 'notifications'" class="fade-in" x-init="$watch('tab', v => { if(v === 'notifications') { fetchNotificationStats(); } })">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">Push Notifications</h1>
+                    <button @click="fetchNotificationStats()" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Refresh
+                    </button>
+                </div>
+
+                <p class="text-sm text-gray-500 mb-6">Send manual push notifications via Firebase Cloud Messaging. Device tokens are registered by the mobile app at login.</p>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                        <p class="text-xs text-gray-400 mb-1">iOS devices</p>
+                        <p class="text-2xl font-bold text-blue-400" x-text="notifStats?.ios ?? 0"></p>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                        <p class="text-xs text-gray-400 mb-1">Android devices</p>
+                        <p class="text-2xl font-bold text-green-400" x-text="notifStats?.android ?? 0"></p>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                        <p class="text-xs text-gray-400 mb-1">Total</p>
+                        <p class="text-2xl font-bold" x-text="notifStats?.total ?? 0"></p>
+                    </div>
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                        <p class="text-xs text-gray-400 mb-1">FCM status</p>
+                        <p class="text-sm font-semibold flex items-center gap-2 mt-1.5"
+                           :class="notifStats?.messaging_ready ? 'text-green-400' : 'text-yellow-400'">
+                            <span class="w-2 h-2 rounded-full" :class="notifStats?.messaging_ready ? 'bg-green-400' : 'bg-yellow-400'"></span>
+                            <span x-text="notifStats?.messaging_ready ? 'Ready' : 'Not configured'"></span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Compose -->
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-3xl">
+                    <h3 class="font-semibold mb-4">Compose notification</h3>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Title</label>
+                            <input x-model="notifForm.title" maxlength="80"
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                placeholder="Seni ozledik! 👋">
+                            <p class="text-[10px] text-gray-500 mt-1"><span x-text="notifForm.title.length"></span>/80</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Body</label>
+                            <textarea x-model="notifForm.body" maxlength="200" rows="3"
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none resize-none"
+                                placeholder="Yeni template'i denemek icin uygulamayi ac."></textarea>
+                            <p class="text-[10px] text-gray-500 mt-1"><span x-text="notifForm.body.length"></span>/200</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Platform</label>
+                                <select x-model="notifForm.platform"
+                                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                                    <option value="ios">iOS only</option>
+                                    <option value="android">Android only</option>
+                                    <option value="all">All platforms</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">App ID (optional)</label>
+                                <input x-model="notifForm.app_id"
+                                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+                                    placeholder="default (leave blank for all apps)">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Deep link (optional)</label>
+                            <input x-model="notifForm.deep_link"
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none font-mono"
+                                placeholder="luris://home or template://remove-braces">
+                            <p class="text-[10px] text-gray-500 mt-1">Sent as <code>data.deep_link</code> so the app can route on tap.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Target UIDs (optional, comma separated)</label>
+                            <input x-model="notifForm.target_uids"
+                                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none font-mono"
+                                placeholder="Leave empty to send to everyone matching the platform filter">
+                        </div>
+
+                        <div x-show="notifResult" class="p-4 rounded-lg border"
+                             :class="notifResult?.failed > 0 ? 'bg-yellow-900/30 border-yellow-700 text-yellow-200' : 'bg-green-900/30 border-green-700 text-green-200'">
+                            <p class="text-sm font-semibold">Result</p>
+                            <p class="text-xs mt-1">
+                                Sent: <span x-text="notifResult?.sent ?? 0"></span> ·
+                                Failed: <span x-text="notifResult?.failed ?? 0"></span> ·
+                                Targets: <span x-text="notifResult?.total_targets ?? 0"></span>
+                                <template x-if="notifResult?.pruned_invalid > 0">
+                                    <span> · Pruned invalid tokens: <span x-text="notifResult.pruned_invalid"></span></span>
+                                </template>
+                            </p>
+                            <p x-show="notifResult?.message" class="text-xs mt-1 opacity-80" x-text="notifResult?.message"></p>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-2">
+                            <button @click="resetNotificationForm()"
+                                class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">
+                                Reset
+                            </button>
+                            <button @click="sendNotification()" :disabled="notifSending || !notifForm.title || !notifForm.body"
+                                class="px-5 py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition flex items-center gap-2">
+                                <svg x-show="notifSending" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                <span x-text="notifSending ? 'Sending...' : 'Send notification'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="tab === 'settings'" class="fade-in">
+                <h1 class="text-2xl font-bold mb-6">Settings</h1>
+
+                <div class="space-y-6 max-w-2xl">
+                    <!-- Server Info -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                        <h3 class="font-semibold mb-4">Server Info</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between py-2 border-b border-gray-800">
+                                <span class="text-gray-400">Status</span>
+                                <span class="text-green-400 flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Running
+                                </span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-gray-800">
+                                <span class="text-gray-400">Admin Email</span>
+                                <span x-text="user?.email || '—'"></span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-gray-800">
+                                <span class="text-gray-400">Firebase Web Auth (Panel)</span>
+                                <span class="text-green-400 flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-green-400 rounded-full"></span> Active
+                                </span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-gray-800">
+                                <span class="text-gray-400">Firebase Admin SDK (Mobil API)</span>
+                                <span :class="stats?.firebase_status === 'connected' ? 'text-green-400' : 'text-yellow-400'" class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full" :class="stats?.firebase_status === 'connected' ? 'bg-green-400' : 'bg-yellow-400'"></span>
+                                    <span x-text="stats?.firebase_status === 'connected' ? 'Connected' : 'Not configured'"></span>
+                                </span>
+                            </div>
+                            <div x-show="stats?.firebase_status !== 'connected'" class="py-2 border-b border-gray-800">
+                                <p class="text-xs text-gray-500">For mobile token verification, upload <code class="bg-gray-800 px-1 rounded text-brand-400">firebase-service-account.json</code> to Coolify storage. The admin panel can run without it.</p>
+                            </div>
+                            <div class="flex justify-between py-2">
+                                <span class="text-gray-400">Active providers</span>
+                                <span x-text="providerList.filter(p => p.configured).length + ' / ' + providerList.length"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rate Limit Info -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                        <h3 class="font-semibold mb-4">Rate Limiting</h3>
+                        <p class="text-sm text-gray-400 mb-4">Rate limit settings are managed via server environment variables.</p>
+                        <div class="space-y-3">
+                            <div class="flex justify-between py-2 border-b border-gray-800">
+                                <span class="text-gray-400">RATE_LIMIT_MAX</span>
+                                <code class="text-brand-400 text-sm">Set via Coolify ENV</code>
+                            </div>
+                            <div class="flex justify-between py-2">
+                                <span class="text-gray-400">RATE_LIMIT_WINDOW</span>
+                                <code class="text-brand-400 text-sm">Set via Coolify ENV</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                        <h3 class="font-semibold mb-4">Quick actions</h3>
+                        <div class="flex flex-wrap gap-3">
+                            <button @click="fetchStats()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">
+                                Refresh Dashboard
+                            </button>
+                            <button @click="healthCheckAll()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition">
+                                Provider Health Check
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div x-show="toast.show" x-transition
+        class="fixed bottom-6 right-6 px-5 py-3 rounded-xl shadow-2xl text-sm font-medium z-50 border"
+        :class="toast.type === 'success' ? 'bg-green-900/90 border-green-700 text-green-200' : 'bg-red-900/90 border-red-700 text-red-200'"
+        x-text="toast.message">
+    </div>
+</div>
+
+<script>
+    (function() {
+        var auth = null;
+        var firebaseReady = false;
+
+        window._firebaseAuth = {
+            init: async function() {
+                try {
+                    var resp = await fetch('/api/config/firebase');
+                    if (!resp.ok) return false;
+                    var json = await resp.json();
+                    var cfg = json.data;
+                    if (!cfg || !cfg.apiKey) return false;
+
+                    var app = firebase.initializeApp(cfg);
+                    auth = firebase.auth(app);
+                    firebaseReady = true;
+                    return true;
+                } catch(e) {
+                    console.error('Firebase init error:', e);
+                    return false;
+                }
+            },
+            isReady: function() { return firebaseReady; },
+            signInGoogle: function() {
+                var provider = new firebase.auth.GoogleAuthProvider();
+                return auth.signInWithPopup(provider);
+            },
+            signOut: function() { return auth.signOut(); },
+            getToken: function() {
+                if (!auth || !auth.currentUser) return Promise.resolve(null);
+                return auth.currentUser.getIdToken(true);
+            },
+            onAuthChanged: function(cb) {
+                if (!auth) return;
+                auth.onAuthStateChanged(cb);
+            }
+        };
+    })();
+</script>
+
+<script>
+    function adminApp() {
+        return {
+            authenticated: false,
+            initializing: true,
+            forbidden: false,
+            user: null,
+            token: null,
+            loginError: '',
+            tab: 'dashboard',
+            stats: null,
+            logs: [],
+            logsMeta: { page: 1, limit: 50, total: 0 },
+            providerList: [],
+
+
+            providerChart: null,
+            allCategories: [],
+            categories: [],
+            categoryForm: null,
+            categoryTypeTab: 'photo',
+            templates: [],
+            templateForm: null,
+            templateUploading: false,
+            templateTypeTab: 'photo',
+            sliderItems: [],
+            sliderForm: null,
+            sliderUploading: false,
+            sliderTypeTab: 'photo',
+            quickButtons: [],
+            quickButtonForm: null,
+            quickButtonUploading: false,
+            onboardingList: [],
+            onboardingForm: null,
+            onboardingUploading: false,
+            reviewList: [],
+            reviewForm: null,
+            reviewUploading: false,
+            translating: {},
+            userList: [],
+            usersMeta: { page: 1, limit: 50, total: 0, search: '' },
+            editingUser: null,
+            revenueData: null,
+            revenueChart: null,
+            loading: { stats: false, health: false, revenue: false },
+            toast: { show: false, message: '', type: 'success' },
+
+            notifStats: null,
+            notifForm: {
+                title: '',
+                body: '',
+                platform: 'ios',
+                app_id: '',
+                deep_link: '',
+                target_uids: ''
+            },
+            notifResult: null,
+            notifSending: false,
+
+            playgroundModes: [
+                { value: 'text_to_text', label: 'Metin → Metin', icon: '💬', needsInput: false },
+                { value: 'text_to_image', label: 'Text → Image', icon: '🎨', needsInput: false },
+                { value: 'text_to_audio', label: 'Metin → Ses', icon: '🔊', needsInput: false },
+                { value: 'image_to_image', label: 'Image → Image', icon: '🖼️', needsInput: true },
+                { value: 'image_to_text', label: 'Image → Text', icon: '📝', needsInput: true },
+                { value: 'image_to_video', label: 'Image → Video', icon: '🎬', needsInput: true },
+                { value: 'video_to_video', label: 'Video → Video', icon: '🎥', needsInput: true },
+                { value: 'audio_to_text', label: 'Ses → Metin', icon: '🎙️', needsInput: true }
+            ],
+
+            pg: {
+                mode: 'text_to_image',
+                templateId: 0,
+                provider: '',
+                model: '',
+                prompt: '',
+                negativePrompt: '',
+                imageURL: '',
+                params: '',
+                result: null,
+                resultDuration: 0,
+                loading: false,
+                error: null,
+                uploading: false,
+                history: []
+            },
+
+            tabs: [
+                { id: 'dashboard', label: 'Dashboard', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>' },
+                { id: 'categories', label: 'Categories', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>' },
+                { id: 'templates', label: 'Templates', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>' },
+                { id: 'playground', label: 'Playground', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>' },
+                { id: 'slider', label: 'Slider', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>' },
+                { id: 'onboarding', label: 'Onboarding', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+                { id: 'reviews', label: 'Reviews', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>' },
+                { id: 'users', label: 'Users', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg>' },
+                { id: 'revenue', label: 'Revenue', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+                { id: 'providers', label: 'Providers', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>' },
+                { id: 'logs', label: 'Logs', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>' },
+                { id: 'notifications', label: 'Push Notifications', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>' },
+                { id: 'settings', label: 'Settings', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' }
+                ],
+
+            async init() {
+                const ready = await window._firebaseAuth.init();
+                if (!ready) {
+                    this.loginError = 'Firebase configuration not found. Check your Coolify ENV settings.';
+                    this.initializing = false;
+                    return;
+                }
+                window._firebaseAuth.onAuthChanged(async (u) => {
+                    if (u) {
+                        this.user = u;
+                        this.token = await window._firebaseAuth.getToken();
+                        try {
+                            await this.api('/api/admin/check');
+                            this.authenticated = true;
+                            this.forbidden = false;
+                            this.initializing = false;
+                            this.fetchAll();
+                        } catch(e) {
+                            this.authenticated = false;
+                            this.forbidden = true;
+                            this.initializing = false;
+                        }
+                    } else {
+                        this.authenticated = false;
+                        this.forbidden = false;
+                        this.user = null;
+                        this.token = null;
+                        this.initializing = false;
+                    }
+                });
+            },
+
+            async signInWithGoogle() {
+                this.loginError = '';
+                try {
+                    await window._firebaseAuth.signInGoogle();
+                } catch (e) {
+                    this.loginError = 'Sign-in failed: ' + (e.message || e);
+                }
+            },
+
+            async signOut() {
+                await window._firebaseAuth.signOut();
+                this.authenticated = false;
+                this.user = null;
+            },
+
+            async api(path, opts = {}) {
+                if (!this.token) this.token = await window._firebaseAuth.getToken();
+                const resp = await fetch(path, {
+                    ...opts,
+                    headers: {
+                        'Authorization': 'Bearer ' + this.token,
+                        'Content-Type': 'application/json',
+                        ...(opts.headers || {})
+                    }
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.error || 'API error');
+                return data.data;
+            },
+
+            showToast(message, type = 'success') {
+                this.toast = { show: true, message, type };
+                setTimeout(() => this.toast.show = false, 3500);
+            },
+
+            async fetchAll() {
+                this.fetchStats();
+                this.fetchProviders();
+                this.fetchLogs();
+                this.fetchCategories();
+                this.fetchTemplates();
+                this.fetchSlider();
+                this.fetchQuickButtons();
+                this.fetchOnboarding();
+                this.fetchUsers();
+                this.fetchReviews();
+                this.fetchRevenueDetailed();
+                this.fetchNotificationStats();
+            },
+
+            async fetchStats() {
+                this.loading.stats = true;
+                try {
+                    this.stats = await this.api('/api/admin/stats');
+                    this.$nextTick(() => this.renderChart());
+                } catch (e) {
+                    this.showToast('Failed to load stats: ' + e.message, 'error');
+                } finally {
+                    this.loading.stats = false;
+                }
+            },
+
+            providerEnvKeys: {
+                'fal.ai': 'FAL_AI_KEY',
+                'replicate': 'REPLICATE_KEY',
+                'deepseek': 'DEEPSEEK_KEY',
+                'openrouter': 'OPENROUTER_KEY',
+                'gemini': 'GEMINI_KEY'
+            },
+
+            async fetchProviders() {
+                try {
+                    const data = await this.api('/api/admin/providers');
+                    this.providerList = (data.providers || []).map(p => {
+                        const name = p.name || p;
+                        return {
+                        name,
+                        configured: p.configured || false,
+                        enabled: p.enabled !== undefined ? p.enabled : p.configured,
+                        status: 'unknown',
+                        message: p.configured ? 'Not tested yet' : 'API key not set',
+                        envKey: this.providerEnvKeys[name] || '',
+                    };});
+                } catch (e) {
+                    this.showToast('Failed to load providers', 'error');
+                }
+            },
+
+            async fetchLogs() {
+                try {
+                    const data = await this.api(`/api/admin/logs?page=${this.logsMeta.page}&limit=${this.logsMeta.limit}`);
+                    this.logs = data.logs || [];
+                    this.logsMeta.total = data.total || 0;
+                } catch (e) {
+                    this.showToast('Failed to load logs', 'error');
+                }
+            },
+
+            async healthCheckAll() {
+                this.loading.health = true;
+                try {
+                    const data = await this.api('/api/admin/providers/health-check');
+                    (data.providers || []).forEach(p => {
+                        const existing = this.providerList.find(x => x.name === p.provider);
+                        if (existing) {
+                            existing.status = p.active ? 'active' : 'error';
+                            existing.message = p.message;
+                        }
+                    });
+                    this.showToast('Health check completed');
+                } catch (e) {
+                    this.showToast('Health check failed: ' + e.message, 'error');
+                } finally {
+                    this.loading.health = false;
+                }
+            },
+
+            async testProvider(name) {
+                try {
+                    const data = await this.api('/api/admin/providers/test', {
+                        method: 'POST',
+                        body: JSON.stringify({ provider: name })
+                    });
+                    const existing = this.providerList.find(x => x.name === name);
+                    if (existing) {
+                        existing.status = data.active ? 'active' : 'error';
+                        existing.message = data.message;
+                    }
+                    this.showToast(`${name}: ${data.message}`);
+                } catch (e) {
+                    this.showToast(`${name} test failed`, 'error');
+                }
+            },
+
+            async toggleProvider(p) {
+                p.enabled = !p.enabled;
+                try {
+                    await this.api('/api/admin/providers/toggle', {
+                        method: 'POST',
+                        body: JSON.stringify({ provider: p.name, enabled: p.enabled })
+                    });
+                    this.showToast(`${p.name} ${p.enabled ? 'enabled' : 'disabled'}`);
+                } catch (e) {
+                    p.enabled = !p.enabled;
+                    this.showToast(`Failed to update: ${e.message}`, 'error');
+                }
+            },
+
+
+
+
+            // ─── Category Methods ────────────────────────
+            async fetchCategories() {
+                try {
+                    const data = await this.api('/api/admin/categories');
+                    const cats = data.categories || [];
+                    // Backward compatible: treat empty/null as photo
+                    cats.forEach(c => { if (!c.type) c.type = 'photo'; });
+                    this.allCategories = cats;
+                    this.applyCategoryTypeFilter();
+                } catch(e) { this.showToast('Failed to load categories', 'error'); }
+            },
+            setCategoryType(t) { this.categoryTypeTab = t; this.applyCategoryTypeFilter(); },
+            applyCategoryTypeFilter() {
+                const t = this.categoryTypeTab || 'photo';
+                this.categories = (this.allCategories || []).filter(c => (c.type || 'photo') === t);
+            },
+            openNewCategory() { this.categoryForm = { app_id:'default', type: this.categoryTypeTab || 'photo', slug:'', name:'', description:'', icon_url:'', sort_order:0, is_active:true, is_popular:false, is_trending:false }; },
+            editCategory(c) { this.categoryForm = { ...c, type: c.type || 'photo', is_popular: !!c.is_popular, is_trending: !!c.is_trending }; },
+            async saveCategory() {
+                try {
+                    if (this.categoryForm.id) {
+                        await this.api('/api/admin/categories/' + this.categoryForm.id, { method:'PUT', body: JSON.stringify(this.categoryForm) });
+                    } else {
+                        await this.api('/api/admin/categories', { method:'POST', body: JSON.stringify(this.categoryForm) });
+                    }
+                    this.categoryForm = null; this.fetchCategories(); this.showToast('Category saved');
+                } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
+            },
+            async deleteCategory(id) {
+                if (!confirm('Bu kategori silinecek. Emin misiniz?')) return;
+                try { await this.api('/api/admin/categories/' + id, { method:'DELETE' }); this.fetchCategories(); this.showToast('Deleted'); }
+                catch(e) { this.showToast('Delete failed: ' + e.message, 'error'); }
+            },
+
+            // ─── Slider Methods ─────────────────────────
+            async fetchSlider() {
+                try {
+                    const data = await this.api('/api/admin/slider?type=' + (this.sliderTypeTab || 'photo'));
+                    const items = data.slider || [];
+                    items.forEach(s => { if (!s.type) s.type = 'photo'; });
+                    this.sliderItems = items;
+                } catch(e) { this.showToast('Failed to load slider', 'error'); }
+            },
+            setSliderType(t) { this.sliderTypeTab = t; this.fetchSlider(); this.fetchQuickButtons(); },
+            openNewSlider() { this.sliderForm = { app_id:'default', type: this.sliderTypeTab || 'photo', template_id:0, title:'', description:'', image_url:'', frame_url:'', deep_link:'', sort_order:0, is_active:true, starts_at:null, ends_at:null }; },
+            editSlider(s) { this.sliderForm = { ...s, type: s.type || 'photo', starts_at: s.starts_at ? s.starts_at.substring(0,16) : null, ends_at: s.ends_at ? s.ends_at.substring(0,16) : null }; },
+            async saveSlider() {
+                try {
+                    const body = { ...this.sliderForm };
+                    if (body.starts_at) body.starts_at = new Date(body.starts_at).toISOString();
+                    if (body.ends_at) body.ends_at = new Date(body.ends_at).toISOString();
+                    if (!body.starts_at) body.starts_at = null;
+                    if (!body.ends_at) body.ends_at = null;
+                    if (body.id) {
+                        await this.api('/api/admin/slider/' + body.id, { method:'PUT', body: JSON.stringify(body) });
+                    } else {
+                        await this.api('/api/admin/slider', { method:'POST', body: JSON.stringify(body) });
+                    }
+                    this.sliderForm = null; this.fetchSlider(); this.showToast('Slider saved');
+                } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
+            },
+            async deleteSlider(id) {
+                if (!confirm('Silinecek. Emin misiniz?')) return;
+                try { await this.api('/api/admin/slider/' + id, { method:'DELETE' }); this.fetchSlider(); this.showToast('Deleted'); }
+                catch(e) { this.showToast('Delete failed', 'error'); }
+            },
+
+            // ─── Quick Buttons Methods ───────────────────
+            async fetchQuickButtons() {
+                try {
+                    const data = await this.api('/api/admin/quick-buttons?type=' + (this.sliderTypeTab || 'photo'));
+                    this.quickButtons = data.buttons || [];
+                } catch(e) { this.showToast('Failed to load quick buttons', 'error'); }
+            },
+            openNewQuickButton() {
+                this.quickButtonForm = { app_id:'default', type: this.sliderTypeTab || 'photo', title:'', icon_url:'', template_id:0, sort_order:0, is_active:true };
+            },
+            editQuickButton(b) { this.quickButtonForm = { ...b, type: b.type || (this.sliderTypeTab || 'photo') }; },
+            async saveQuickButton() {
+                try {
+                    if (this.quickButtonForm.id) {
+                        await this.api('/api/admin/quick-buttons/' + this.quickButtonForm.id, { method:'PUT', body: JSON.stringify(this.quickButtonForm) });
+                    } else {
+                        await this.api('/api/admin/quick-buttons', { method:'POST', body: JSON.stringify(this.quickButtonForm) });
+                    }
+                    this.quickButtonForm = null;
+                    this.fetchQuickButtons();
+                    this.showToast('Saved');
+                } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
+            },
+            async deleteQuickButton(id) {
+                if (!confirm('Delete this button?')) return;
+                try { await this.api('/api/admin/quick-buttons/' + id, { method:'DELETE' }); this.fetchQuickButtons(); this.showToast('Deleted'); }
+                catch(e) { this.showToast('Delete failed: ' + e.message, 'error'); }
+            },
+            async uploadQuickButtonIcon() {
+                const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*,.svg';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0]; if (!file) return;
+                    this.quickButtonUploading = true;
+                    try {
+                        const fd = new FormData(); fd.append('file', file); fd.append('folder', 'quick-buttons');
+                        const token = await window._firebaseAuth.getToken();
+                        const resp = await fetch('/api/admin/upload-media', { method:'POST', headers:{'Authorization':'Bearer '+token}, body:fd });
+                        const json = await resp.json();
+                        if (json.success) { this.quickButtonForm.icon_url = json.data.url; this.showToast('Uploaded'); }
+                        else this.showToast(json.error, 'error');
+                    } catch(e) { this.showToast('Upload failed', 'error'); }
+                    finally { this.quickButtonUploading = false; }
+                }; input.click();
+            },
+            async uploadSliderMedia(field) {
+                const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*,video/*';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0]; if (!file) return;
+                    this.sliderUploading = true;
+                    try {
+                        const fd = new FormData(); fd.append('file', file); fd.append('folder', 'slider');
+                        const token = await window._firebaseAuth.getToken();
+                        const resp = await fetch('/api/admin/upload-media', { method:'POST', headers:{'Authorization':'Bearer '+token}, body:fd });
+                        const json = await resp.json();
+                        if (json.success) { this.sliderForm[field] = json.data.url; this.showToast('Uploaded'); }
+                        else this.showToast(json.error, 'error');
+                    } catch(e) { this.showToast('Error', 'error'); }
+                    finally { this.sliderUploading = false; }
+                }; input.click();
+            },
+
+            // ─── Translate Method ───────────────────────
+            async translateEntity(entityType, entityId) {
+                const key = entityType + '_' + entityId;
+                this.translating[key] = true;
+                try {
+                    const data = await this.api('/api/admin/translate', {
+                        method:'POST', body: JSON.stringify({ entity_type: entityType, entity_id: entityId, source_lang: 'en' })
+                    });
+                    this.showToast(`${data.total_saved} translations saved (${data.languages} languages)`);
+                } catch(e) { this.showToast('Translation failed: ' + e.message, 'error'); }
+                finally { this.translating[key] = false; }
+            },
+
+            // ─── Template Methods ────────────────────────
+            actionTypes: [
+                { value:'image_generation', label:'Image Generation' },
+                { value:'ai_chat', label:'AI Chat' },
+                { value:'upscale', label:'Upscale' },
+                { value:'remove_bg', label:'Remove Background' },
+                { value:'photo_restoration', label:'Photo Restoration' },
+                { value:'text_to_speech', label:'Text to Speech' },
+                { value:'speech_to_text', label:'Speech to Text' },
+                { value:'image_to_text', label:'Image to Text' },
+            ],
+            newTemplateForm() {
+                return { app_id:'default', slug:'', name:'', description:'', action_type:'image_generation', prompt:'', negative_prompt:'', provider:'fal.ai', model:'', category_id:0, before_media_url:'', before_media_type:'image', after_media_url:'', after_media_type:'image', reference_image_count: 1, hide_from_all: false, aspect_ratio:'1:1', supported_aspect_ratios:'1:1,4:5,9:16,16:9,3:4,4:3', icon_url:'', params:'', credit_cost:1, is_active:true, is_featured:false, is_premium:false, sort_order:0 };
+            },
+
+            async fetchTemplates() {
+                try {
+                    const type = this.templateTypeTab || 'photo';
+                    const data = await this.api('/api/admin/templates?type=' + encodeURIComponent(type));
+                    this.templates = data.templates || [];
+                } catch(e) { this.showToast('Failed to load templates', 'error'); }
+            },
+
+            setTemplateType(t) { this.templateTypeTab = t; this.fetchTemplates(); },
+
+            getCategoriesForType(t) {
+                const type = t || 'photo';
+                const cats = this.allCategories || [];
+                if (type === 'photo') return cats.filter(c => !c.type || c.type === 'photo');
+                return cats.filter(c => c.type === type);
+            },
+
+            async openNewTemplate() {
+                this.templateForm = this.newTemplateForm();
+            },
+
+            async editTemplate(t) {
+                this.templateForm = { ...t };
+                if (!this.templateForm.provider) this.templateForm.provider = 'fal.ai';
+            },
+
+            async saveTemplate() {
+                try {
+                    if (this.templateForm.id) {
+                        await this.api('/api/admin/templates/' + this.templateForm.id, { method:'PUT', body: JSON.stringify(this.templateForm) });
+                        this.showToast('Template updated');
+                    } else {
+                        await this.api('/api/admin/templates', { method:'POST', body: JSON.stringify(this.templateForm) });
+                        this.showToast('Template created');
+                    }
+                    this.templateForm = null;
+                    await this.fetchTemplates();
+                } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
+            },
+
+            async deleteTemplate(id) {
+                if (!confirm('This template will be deleted. Continue?')) return;
+                try {
+                    await this.api('/api/admin/templates/' + id, { method:'DELETE' });
+                    this.showToast('Template deleted');
+                    this.fetchTemplates();
+                } catch(e) { this.showToast('Failed to delete: ' + e.message, 'error'); }
+            },
+
+            async uploadMediaFor(field) {
+                if (!this.templateForm) return;
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*,video/*';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    this.templateUploading = true;
+                    try {
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        fd.append('folder', 'templates');
+                        const token = await window._firebaseAuth.getToken();
+                        if (!token) { this.showToast('Auth token not available — please re-login', 'error'); return; }
+                        const resp = await fetch('/api/admin/upload-media', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + token },
+                            body: fd
+                        });
+                        const json = await resp.json();
+                        if (json.success && json.data?.url) {
+                            this.templateForm[field] = json.data.url;
+                            this.showToast('Uploaded');
+                        } else {
+                            this.showToast(json.error || 'Upload failed — check R2 storage config', 'error');
+                        }
+                    } catch(e) { this.showToast('Upload error: ' + e.message, 'error'); }
+                    finally { this.templateUploading = false; }
+                };
+                input.click();
+            },
+
+            // ─── Onboarding Methods ────────────────────
+            newOnboardingForm() {
+                return { app_id:'default', type:'video', title:'', description:'', media_url:'', thumbnail_url:'', sort_order:0, is_active:true };
+            },
+
+            async fetchOnboarding() {
+                try {
+                    const data = await this.api('/api/admin/onboarding');
+                    this.onboardingList = data.onboarding || [];
+                } catch(e) { this.showToast('Failed to load onboarding media', 'error'); }
+            },
+
+            openNewOnboarding() {
+                this.onboardingForm = this.newOnboardingForm();
+            },
+
+            editOnboarding(o) {
+                this.onboardingForm = { ...o };
+            },
+
+            async saveOnboarding() {
+                try {
+                    if (this.onboardingForm.id) {
+                        await this.api('/api/admin/onboarding/' + this.onboardingForm.id, { method:'PUT', body: JSON.stringify(this.onboardingForm) });
+                        this.showToast('Onboarding updated');
+                    } else {
+                        await this.api('/api/admin/onboarding', { method:'POST', body: JSON.stringify(this.onboardingForm) });
+                        this.showToast('Onboarding created');
+                    }
+                    this.onboardingForm = null;
+                    this.fetchOnboarding();
+                } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
+            },
+
+            async deleteOnboarding(id) {
+                if (!confirm('This onboarding media will be deleted. Continue?')) return;
+                try {
+                    await this.api('/api/admin/onboarding/' + id, { method:'DELETE' });
+                    this.showToast('Deleted');
+                    this.fetchOnboarding();
+                } catch(e) { this.showToast('Delete failed: ' + e.message, 'error'); }
+            },
+
+            async uploadOnboardingMedia(field) {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*,video/*';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    this.onboardingUploading = true;
+                    try {
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        fd.append('folder', 'onboarding');
+                        const token = await window._firebaseAuth.getToken();
+                        const resp = await fetch('/api/admin/upload-media', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + token },
+                            body: fd
+                        });
+                        const json = await resp.json();
+                        if (json.success) {
+                            this.onboardingForm[field] = json.data.url;
+                            this.showToast('File uploaded');
+                        } else { this.showToast(json.error || 'Upload failed', 'error'); }
+                    } catch(e) { this.showToast('Upload failed: ' + e.message, 'error'); }
+                    finally { this.onboardingUploading = false; }
+                };
+                input.click();
+            },
+
+            // ─── Review Methods ──────────────────────────
+            newReviewForm() {
+                return { nickname:'', photo_url:'', review:'', rating:5, sort_order:0, is_active:true };
+            },
+
+            async fetchReviews() {
+                try {
+                    const data = await this.api('/api/admin/reviews');
+                    this.reviewList = data.reviews || [];
+                } catch(e) { this.showToast('Failed to load reviews', 'error'); }
+            },
+
+            openNewReview() {
+                this.reviewForm = this.newReviewForm();
+            },
+
+            editReview(r) {
+                this.reviewForm = { ...r };
+            },
+
+            async saveReview() {
+                try {
+                    if (this.reviewForm.id) {
+                        await this.api('/api/admin/reviews/' + this.reviewForm.id, { method:'PUT', body: JSON.stringify(this.reviewForm) });
+                        this.showToast('Review updated');
+                    } else {
+                        await this.api('/api/admin/reviews', { method:'POST', body: JSON.stringify(this.reviewForm) });
+                        this.showToast('Review created');
+                    }
+                    this.reviewForm = null;
+                    this.fetchReviews();
+                } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
+            },
+
+            async deleteReview(id) {
+                if (!confirm('Bu yorum silinecek. Emin misiniz?')) return;
+                try {
+                    await this.api('/api/admin/reviews/' + id, { method:'DELETE' });
+                    this.showToast('Deleted');
+                    this.fetchReviews();
+                } catch(e) { this.showToast('Delete failed: ' + e.message, 'error'); }
+            },
+
+            async uploadReviewPhoto() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    this.reviewUploading = true;
+                    try {
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        fd.append('folder', 'reviews');
+                        const token = await window._firebaseAuth.getToken();
+                        const resp = await fetch('/api/admin/upload-media', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + token },
+                            body: fd
+                        });
+                        const json = await resp.json();
+                        if (json.success) {
+                            this.reviewForm.photo_url = json.data.url;
+                            this.showToast('Photo uploaded');
+                        } else { this.showToast(json.error || 'Upload failed', 'error'); }
+                    } catch(e) { this.showToast('Upload failed: ' + e.message, 'error'); }
+                    finally { this.reviewUploading = false; }
+                };
+                input.click();
+            },
+
+            // ─── User Management Methods ─────────────────
+            async fetchUsers() {
+                try {
+                    const s = this.usersMeta.search ? `&search=${encodeURIComponent(this.usersMeta.search)}` : '';
+                    const data = await this.api(`/api/admin/users?page=${this.usersMeta.page}&limit=${this.usersMeta.limit}${s}`);
+                    this.userList = data.users || [];
+                    this.usersMeta.total = data.total || 0;
+                } catch(e) { this.showToast('Failed to load users', 'error'); }
+            },
+            searchUsers() {
+                this.usersMeta.page = 1;
+                this.fetchUsers();
+            },
+            openEditUser(u) {
+                this.editingUser = { id: u.id, email: u.email, name: u.name, photo_url: u.photo_url, credits: u.credits, is_pro: u.is_pro, is_banned: u.is_banned || false, ban_reason: u.ban_reason || '' };
+            },
+            async saveUser() {
+                try {
+                    await this.api('/api/admin/users/' + this.editingUser.id, {
+                        method: 'PUT',
+                        body: JSON.stringify({ credits: this.editingUser.credits, is_pro: this.editingUser.is_pro, is_banned: this.editingUser.is_banned, ban_reason: this.editingUser.ban_reason })
+                    });
+                    this.editingUser = null;
+                    this.fetchUsers();
+                    this.showToast('User updated');
+                } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
+            },
+            async toggleBanUser(u) {
+                const newBanned = !u.is_banned;
+                const reason = newBanned ? prompt('Ban reason (optional):') || 'Abuse' : '';
+                if (newBanned && reason === null) return;
+                try {
+                    await this.api('/api/admin/users/' + u.id, {
+                        method: 'PUT',
+                        body: JSON.stringify({ credits: u.credits, is_pro: u.is_pro, is_banned: newBanned, ban_reason: reason })
+                    });
+                    this.fetchUsers();
+                    this.showToast(newBanned ? 'User banned' : 'User unbanned');
+                } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
+            },
+
+            // ─── Playground Methods ──────────────────────
+            pgModeNeedsInput() {
+                const mode = this.playgroundModes.find(m => m.value === this.pg.mode);
+                return mode ? mode.needsInput : false;
+            },
+
+            fillPlaygroundFromTemplate() {
+                const id = parseInt(this.pg.templateId);
+                if (!id) return;
+                const t = this.templates.find(t => t.id === id);
+                if (!t) return;
+                this.pg.provider = t.provider || '';
+                this.pg.model = t.model || '';
+                this.pg.prompt = t.prompt || '';
+                this.pg.negativePrompt = t.negative_prompt || '';
+                this.pg.params = t.params || '';
+                if (t.before_media_url) this.pg.imageURL = t.before_media_url;
+                const typeMap = {
+                    'image_generation': 'text_to_image',
+                    'ai_chat': 'text_to_text',
+                    'upscale': 'image_to_image',
+                    'remove_bg': 'image_to_image',
+                    'photo_restoration': 'image_to_image',
+                    'text_to_speech': 'text_to_audio',
+                    'speech_to_text': 'audio_to_text',
+                    'image_to_text': 'image_to_text'
+                };
+                if (typeMap[t.action_type]) this.pg.mode = typeMap[t.action_type];
+            },
+
+            async runPlayground() {
+                if (!this.pg.provider || !this.pg.prompt) {
+                    this.showToast('Provider and prompt are required', 'error');
+                    return;
+                }
+
+                this.pg.loading = true;
+                this.pg.error = null;
+                this.pg.result = null;
+                this.pg.resultDuration = 0;
+
+                let params = {};
+                if (this.pg.params) {
+                    try { params = JSON.parse(this.pg.params); } catch(e) { params = {}; }
+                }
+                if (this.pg.negativePrompt) {
+                    params['negative_prompt'] = this.pg.negativePrompt;
+                }
+
+                try {
+                    const data = await this.api('/api/admin/playground', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            provider: this.pg.provider,
+                            model: this.pg.model,
+                            prompt: this.pg.prompt,
+                            image_url: this.pg.imageURL,
+                            action_type: this.pg.mode,
+                            params: params
+                        })
+                    });
+                    this.pg.result = data.result;
+                    this.pg.resultDuration = data.duration_ms;
+                    this.pg.history.unshift({
+                        provider: data.provider,
+                        model: data.model || '',
+                        action_type: data.action_type,
+                        prompt: this.pg.prompt.substring(0, 100),
+                        result_url: data.result?.result_url,
+                        duration_ms: data.duration_ms,
+                        mode: this.pg.mode,
+                        timestamp: new Date().toLocaleString('tr-TR')
+                    });
+                    if (this.pg.history.length > 20) this.pg.history.pop();
+                    this.showToast('Test completed (' + data.duration_ms + 'ms)');
+                } catch(e) {
+                    this.pg.error = e.message || 'Test failed';
+                    this.showToast('Test failed: ' + e.message, 'error');
+                } finally {
+                    this.pg.loading = false;
+                }
+            },
+
+            resetPlayground() {
+                this.pg.templateId = 0;
+                this.pg.provider = '';
+                this.pg.model = '';
+                this.pg.prompt = '';
+                this.pg.negativePrompt = '';
+                this.pg.imageURL = '';
+                this.pg.params = '';
+                this.pg.result = null;
+                this.pg.resultDuration = 0;
+                this.pg.error = null;
+            },
+
+            loadPlaygroundHistory(i) {
+                const h = this.pg.history[i];
+                if (!h) return;
+                this.pg.provider = h.provider;
+                this.pg.model = h.model;
+                this.pg.prompt = h.prompt;
+                this.pg.mode = h.action_type || 'text_to_image';
+            },
+
+            async uploadPlaygroundMedia() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*,video/*,audio/*';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    this.pg.uploading = true;
+                    try {
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        fd.append('folder', 'playground');
+                        const token = await window._firebaseAuth.getToken();
+                        const resp = await fetch('/api/admin/upload-media', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + token },
+                            body: fd
+                        });
+                        const json = await resp.json();
+                        if (json.success) {
+                            this.pg.imageURL = json.data.url;
+                            this.showToast('File uploaded');
+                        } else { this.showToast(json.error || 'Upload failed', 'error'); }
+                    } catch(e) { this.showToast('Upload failed: ' + e.message, 'error'); }
+                    finally { this.pg.uploading = false; }
+                };
+                input.click();
+            },
+
+            renderChart() {
+                const usage = this.stats?.provider_usage;
+                if (!usage || !usage.length) return;
+
+                const canvas = document.getElementById('providerChart');
+                if (!canvas) return;
+
+                if (this.providerChart) this.providerChart.destroy();
+
+                const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6'];
+                this.providerChart = new Chart(canvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: usage.map(u => u.provider),
+                        datasets: [{
+                            data: usage.map(u => u.count),
+                            backgroundColor: colors.slice(0, usage.length),
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { color: '#9ca3af', padding: 16, usePointStyle: true }
+                            }
+                        }
+                    }
+                });
+            },
+
+            async fetchRevenueDetailed() {
+                this.loading.revenue = true;
+                try {
+                    const data = await this.api('/api/admin/stats/revenue-detailed');
+                    this.revenueData = data;
+                    this.$nextTick(() => this.renderRevenueChart());
+                } catch(e) { console.error('Revenue fetch error:', e); }
+                this.loading.revenue = false;
+            },
+
+            async fetchNotificationStats() {
+                try {
+                    this.notifStats = await this.api('/api/admin/notifications/stats');
+                } catch (e) {
+                    console.error('Notification stats error:', e);
+                }
+            },
+
+            resetNotificationForm() {
+                this.notifForm = { title: '', body: '', platform: 'ios', app_id: '', deep_link: '', target_uids: '' };
+                this.notifResult = null;
+            },
+
+            async sendNotification() {
+                if (!this.notifForm.title.trim() || !this.notifForm.body.trim()) {
+                    this.showToast('Title and body are required', 'error');
+                    return;
+                }
+                if (!this.notifStats?.messaging_ready) {
+                    this.showToast('FCM is not configured on the server', 'error');
+                    return;
+                }
+                if (!confirm(`Send this notification to ${this.notifForm.platform === 'all' ? 'ALL users' : this.notifForm.platform.toUpperCase() + ' users'}?`)) return;
+
+                this.notifSending = true;
+                this.notifResult = null;
+                try {
+                    const targets = (this.notifForm.target_uids || '')
+                        .split(',').map(s => s.trim()).filter(Boolean);
+                    const body = {
+                        title: this.notifForm.title.trim(),
+                        body: this.notifForm.body.trim(),
+                        platform: this.notifForm.platform,
+                        app_id: this.notifForm.app_id.trim(),
+                        deep_link: this.notifForm.deep_link.trim(),
+                        target_uids: targets
+                    };
+                    const data = await this.api('/api/admin/notifications/send', {
+                        method: 'POST',
+                        body: JSON.stringify(body)
+                    });
+                    this.notifResult = data;
+                    this.showToast(`Sent to ${data.sent} device(s)`);
+                    this.fetchNotificationStats();
+                } catch (e) {
+                    this.showToast('Send failed: ' + e.message, 'error');
+                } finally {
+                    this.notifSending = false;
+                }
+            },
+
+            renderRevenueChart() {
+                const chartData = this.revenueData?.chart_data;
+                if (!chartData || !chartData.length) return;
+
+                const canvas = document.getElementById('revenueChart');
+                if (!canvas) return;
+
+                if (this.revenueChart) this.revenueChart.destroy();
+
+                const labels = chartData.map(d => {
+                    const dt = new Date(d.day);
+                    return dt.toLocaleDateString('tr-TR', { day:'2-digit', month:'short' });
+                });
+                const values = chartData.map(d => d.count);
+
+                this.revenueChart = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Usage',
+                            data: values,
+                            backgroundColor: 'rgba(99, 102, 241, 0.5)',
+                            borderColor: '#6366f1',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#6b7280', font: { size: 10 } }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#6b7280', precision: 0 },
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            },
+
+            formatDate(d) {
+                if (!d) return '—';
+                const date = new Date(d);
+                return date.toLocaleString('tr-TR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+            }
+        }
+    }
+</script>
+</body>
+</html>

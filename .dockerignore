@@ -1,0 +1,10 @@
+.env
+*.db
+firebase-service-account.json
+data/
+tmp/
+.git/
+.gitignore
+README.md
+docker-compose.yml
+.DS_Store

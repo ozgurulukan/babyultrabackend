@@ -1,0 +1,10 @@
+.env
+*.db
+firebase-service-account.json
+data/
+tmp/
+/server
+*.exe
+*.test
+*.out
+.DS_Store

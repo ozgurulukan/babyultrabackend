@@ -1,0 +1,168 @@
+package router
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/ozgurulukan/bubsiebackend/internal/config"
+	"github.com/ozgurulukan/bubsiebackend/internal/handler"
+	"github.com/ozgurulukan/bubsiebackend/internal/middleware"
+	"github.com/ozgurulukan/bubsiebackend/internal/model"
+	"github.com/ozgurulukan/bubsiebackend/internal/service"
+	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
+	"github.com/ozgurulukan/bubsiebackend/internal/service/storage"
+	"github.com/ozgurulukan/bubsiebackend/internal/web"
+)
+
+func Setup(
+	app *fiber.App,
+	cfg *config.Config,
+	firebase *service.FirebaseService,
+	registry *provider.Registry,
+	revenuecat *service.RevenueCatService,
+	r2 *storage.R2Storage,
+	translator *service.TranslateService,
+) {
+	app.Use(recover.New())
+	app.Use(logger.New(logger.Config{
+		Format:     "${time} | ${status} | ${latency} | ${ip} | ${method} | ${path}\n",
+		TimeFormat: "2006-01-02 15:04:05",
+	}))
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: cfg.CORSAllowOrigins,
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Install-Seed",
+		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
+	}))
+	app.Use(func(c *fiber.Ctx) error {
+		c.Set("X-Content-Type-Options", "nosniff")
+		c.Set("X-Frame-Options", "DENY")
+		c.Set("X-XSS-Protection", "1; mode=block")
+		c.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		return c.Next()
+	})
+
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.Redirect("/panel")
+	})
+
+	app.Get("/health", handler.HealthCheck)
+
+	app.Get("/api/config/firebase", func(c *fiber.Ctx) error {
+		if cfg.FirebaseWebAPIKey == "" {
+			return model.ErrorResponse(c, fiber.StatusNotFound, "firebase web config not set")
+		}
+		return model.SuccessResponse(c, fiber.Map{
+			"apiKey":     cfg.FirebaseWebAPIKey,
+			"authDomain": cfg.FirebaseAuthDomain,
+			"projectId":  cfg.FirebaseProjectID,
+			"appId":      cfg.FirebaseAppID,
+		})
+	})
+
+	// Serve uploaded images
+	app.Static("/uploads", "./data/uploads", fiber.Static{
+		Browse: false,
+	})
+
+	web.RegisterRoutes(app)
+
+	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitMax, cfg.RateLimitWindow)
+	adminRateLimiter := middleware.NewRateLimiter(120, 60)
+
+	transformHandler := handler.NewTransformHandler(registry, r2)
+	userHandler := handler.NewUserHandler(cfg, registry, r2)
+	adminHandler := handler.NewAdminHandler(cfg, registry, firebase, revenuecat)
+	playgroundHandler := handler.NewPlaygroundHandler(registry, r2)
+	contentHandler := handler.NewContentHandler(r2, translator)
+	notificationHandler := handler.NewNotificationHandler(firebase)
+
+	api := app.Group("/api")
+
+	// Mobile API
+	v1 := api.Group("/v1")
+	v1.Use(middleware.FirebaseAuth(firebase, cfg.InitialCredits))
+	v1.Use(rateLimiter.Middleware())
+
+	v1.Post("/transform", transformHandler.Transform)
+	v1.Post("/upload", userHandler.UploadImage)
+	v1.Get("/me", userHandler.GetProfile)
+	v1.Get("/providers", userHandler.GetProviders)
+	v1.Get("/history", userHandler.GetHistory)
+	v1.Get("/categories", contentHandler.GetCategories)
+	v1.Get("/templates", contentHandler.GetTemplates)
+	v1.Get("/slider", contentHandler.GetSlider)
+	v1.Get("/quick-buttons", contentHandler.GetQuickButtons)
+	v1.Get("/onboarding", contentHandler.GetOnboarding)
+	v1.Get("/reviews", contentHandler.GetReviews)
+	v1.Get("/languages", contentHandler.GetLanguages)
+	v1.Post("/device-token", notificationHandler.RegisterDeviceToken)
+	v1.Delete("/device-token", notificationHandler.DeleteDeviceToken)
+
+	// Admin API
+	admin := api.Group("/admin")
+	admin.Use(middleware.LightweightFirebaseAuth(cfg.FirebaseProjectID, cfg.AdminEmail))
+	admin.Use(middleware.AdminOnly(cfg.AdminEmail))
+	admin.Use(adminRateLimiter.Middleware())
+	admin.Get("/stats", adminHandler.GetStats)
+	admin.Get("/stats/revenue", adminHandler.GetRevenue)
+	admin.Get("/stats/revenue-detailed", adminHandler.GetRevenueDetailed)
+	admin.Get("/users/count", adminHandler.GetUserCount)
+	admin.Get("/providers", adminHandler.ListProviders)
+	admin.Get("/providers/health-check", adminHandler.HealthCheckProviders)
+	admin.Post("/providers/test", adminHandler.TestProvider)
+	admin.Post("/providers/toggle", adminHandler.ToggleProvider)
+	admin.Post("/providers/update-keys", adminHandler.UpdateProviderKey)
+	admin.Get("/logs", adminHandler.GetRequestLogs)
+	admin.Get("/users", adminHandler.ListUsers)
+	admin.Put("/users/:id", adminHandler.UpdateUserCredits)
+
+	admin.Get("/categories", contentHandler.AdminListCategories)
+	admin.Post("/categories", contentHandler.AdminCreateCategory)
+	admin.Put("/categories/:id", contentHandler.AdminUpdateCategory)
+	admin.Delete("/categories/:id", contentHandler.AdminDeleteCategory)
+
+	admin.Get("/templates", contentHandler.AdminListTemplates)
+	admin.Post("/templates", contentHandler.AdminCreateTemplate)
+	admin.Put("/templates/:id", contentHandler.AdminUpdateTemplate)
+	admin.Delete("/templates/:id", contentHandler.AdminDeleteTemplate)
+
+	admin.Get("/slider", contentHandler.AdminListSlider)
+	admin.Post("/slider", contentHandler.AdminCreateSlider)
+	admin.Put("/slider/:id", contentHandler.AdminUpdateSlider)
+	admin.Delete("/slider/:id", contentHandler.AdminDeleteSlider)
+
+	admin.Get("/quick-buttons", contentHandler.AdminListQuickButtons)
+	admin.Post("/quick-buttons", contentHandler.AdminCreateQuickButton)
+	admin.Put("/quick-buttons/:id", contentHandler.AdminUpdateQuickButton)
+	admin.Delete("/quick-buttons/:id", contentHandler.AdminDeleteQuickButton)
+
+	admin.Get("/onboarding", contentHandler.AdminListOnboarding)
+	admin.Post("/onboarding", contentHandler.AdminCreateOnboarding)
+	admin.Put("/onboarding/:id", contentHandler.AdminUpdateOnboarding)
+	admin.Delete("/onboarding/:id", contentHandler.AdminDeleteOnboarding)
+
+	admin.Get("/reviews", contentHandler.AdminListReviews)
+	admin.Post("/reviews", contentHandler.AdminCreateReview)
+	admin.Put("/reviews/:id", contentHandler.AdminUpdateReview)
+	admin.Delete("/reviews/:id", contentHandler.AdminDeleteReview)
+
+	admin.Post("/translate", contentHandler.AdminTranslate)
+	admin.Get("/translations", contentHandler.AdminGetTranslations)
+
+	admin.Post("/upload-media", contentHandler.AdminUploadMedia)
+
+	admin.Post("/playground", playgroundHandler.TestTransform)
+	admin.Get("/playground/meta", playgroundHandler.PlaygroundMeta)
+
+	admin.Get("/notifications/stats", notificationHandler.AdminTokenStats)
+	admin.Post("/notifications/send", notificationHandler.AdminSendNotification)
+
+	admin.Get("/check", func(c *fiber.Ctx) error {
+		return model.SuccessResponse(c, fiber.Map{
+			"admin": true,
+			"email": c.Locals("email"),
+		})
+	})
+}
