@@ -875,9 +875,11 @@
                             <div class="flex items-start justify-between">
                                 <div class="flex items-start gap-4">
                                     <div class="w-16 h-16 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
-                                        <img x-show="t.before_media_url && t.before_media_type!=='video'" :src="t.before_media_url" class="w-full h-full object-cover">
-                                        <video x-show="t.before_media_url && t.before_media_type==='video'" :src="t.before_media_url" class="w-full h-full object-cover" muted></video>
-                                        <div x-show="!t.before_media_url" class="w-full h-full flex items-center justify-center text-gray-600 text-xl font-bold" x-text="t.name?.charAt(0)?.toUpperCase()"></div>
+                                        <img x-show="t.after_media_url && t.after_media_type!=='video'" :src="t.after_media_url" class="w-full h-full object-cover">
+                                        <video x-show="t.after_media_url && t.after_media_type==='video'" :src="t.after_media_url" class="w-full h-full object-cover" muted></video>
+                                        <img x-show="!t.after_media_url && t.before_media_url && t.before_media_type!=='video'" :src="t.before_media_url" class="w-full h-full object-cover">
+                                        <video x-show="!t.after_media_url && t.before_media_url && t.before_media_type==='video'" :src="t.before_media_url" class="w-full h-full object-cover" muted></video>
+                                        <div x-show="!t.after_media_url && !t.before_media_url" class="w-full h-full flex items-center justify-center text-gray-600 text-xl font-bold" x-text="t.name?.charAt(0)?.toUpperCase()"></div>
                                     </div>
                                     <div>
                                         <h3 class="font-semibold flex items-center gap-2 flex-wrap">
