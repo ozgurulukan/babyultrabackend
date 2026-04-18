@@ -26,7 +26,16 @@ type FalAI struct {
 func NewFalAI(apiKey string) *FalAI {
 	return &FalAI{
 		apiKey: apiKey,
-		client: &http.Client{Timeout: 300 * time.Second},
+		client: &http.Client{
+			Timeout: 300 * time.Second,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) >= 10 {
+					return fmt.Errorf("stopped after 10 redirects")
+				}
+				req.Header.Set("Authorization", "Key "+apiKey)
+				return nil
+			},
+		},
 	}
 }
 
@@ -129,6 +138,8 @@ func (f *FalAI) transformViaQueue(ctx context.Context, model string, payload map
 		return nil, fmt.Errorf("fal.ai: queue submit unmarshal error: %w", err)
 	}
 
+	log.Printf("fal.ai queue submit response: %s", string(respBody))
+
 	requestID, _ := submitResult["request_id"].(string)
 	if requestID == "" {
 		return nil, fmt.Errorf("fal.ai: queue submit did not return request_id")
@@ -147,7 +158,16 @@ func (f *FalAI) transformViaQueue(ctx context.Context, model string, payload map
 
 	log.Printf("fal.ai queue submitted model=%s request_id=%s status_url=%s response_url=%s", model, requestID, statusURL, resultURL)
 
-	pollClient := &http.Client{Timeout: 120 * time.Second}
+	pollClient := &http.Client{
+		Timeout: 120 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("stopped after 10 redirects")
+			}
+			req.Header.Set("Authorization", "Key "+f.apiKey)
+			return nil
+		},
+	}
 
 	for {
 		select {
