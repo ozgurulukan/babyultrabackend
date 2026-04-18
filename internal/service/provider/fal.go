@@ -190,7 +190,7 @@ func (f *FalAI) transformViaQueue(ctx context.Context, model string, payload map
 		sBody, sReadErr := io.ReadAll(sResp.Body)
 		sResp.Body.Close()
 
-		if sResp.StatusCode != http.StatusOK {
+		if sResp.StatusCode != http.StatusOK && sResp.StatusCode != http.StatusAccepted {
 			log.Printf("fal.ai queue status error (status %d): %s", sResp.StatusCode, string(sBody))
 			return nil, fmt.Errorf("fal.ai: queue status error (status %d): %s", sResp.StatusCode, string(sBody))
 		}
