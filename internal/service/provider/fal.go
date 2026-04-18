@@ -240,6 +240,15 @@ func (f *FalAI) HealthCheck(ctx context.Context) *HealthStatus {
 	return &HealthStatus{Provider: f.Name(), Active: true, Message: "API key valid"}
 }
 
+// klingV26ProAllowedParams lists params accepted by the Kling v2.6 Pro image-to-video model.
+var klingV26ProAllowedParams = map[string]bool{
+	"duration":        true,
+	"negative_prompt": true,
+	"generate_audio":  true,
+	"voice_ids":        true,
+	"end_image_url":   true,
+}
+
 // buildFalPayload constructs the API payload with model-specific field mappings.
 // Different fal.ai models expect different field names and formats.
 func buildFalPayload(model string, input *TransformInput) map[string]interface{} {
@@ -254,18 +263,26 @@ func buildFalPayload(model string, input *TransformInput) map[string]interface{}
 
 	switch {
 	case isPuLIDModel(model):
-		payload["reference_image_url"] = input.ImageURL
+		if input.ImageURL != "" {
+			payload["reference_image_url"] = input.ImageURL
+		}
 	case isImageURLsModel(model):
 		payload["image_urls"] = imageURLs
 	case isKlingV26Model(model):
-		payload["start_image_url"] = input.ImageURL
+		if input.ImageURL != "" {
+			payload["start_image_url"] = input.ImageURL
+		}
 		if input.NegativePrompt != "" {
 			payload["negative_prompt"] = input.NegativePrompt
 		}
 	case isKlingVideoModel(model):
-		payload["image_url"] = input.ImageURL
+		if input.ImageURL != "" {
+			payload["image_url"] = input.ImageURL
+		}
 	default:
-		payload["image_url"] = input.ImageURL
+		if input.ImageURL != "" {
+			payload["image_url"] = input.ImageURL
+		}
 	}
 
 	if input.MomImageURL != "" {
@@ -282,6 +299,18 @@ func buildFalPayload(model string, input *TransformInput) map[string]interface{}
 		if k == "aspect_ratio" {
 			applyAspectRatio(payload, model, fmt.Sprintf("%v", v))
 			continue
+		}
+		if k == "negative_prompt" && input.NegativePrompt != "" {
+			continue
+		}
+		if isKlingV26Model(model) {
+			if !klingV26ProAllowedParams[k] {
+				continue
+			}
+			if k == "duration" {
+				payload[k] = fmt.Sprintf("%v", v)
+				continue
+			}
 		}
 		payload[k] = v
 	}
