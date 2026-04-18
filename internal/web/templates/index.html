@@ -648,9 +648,10 @@
                 <!-- Template Form Modal -->
                 <div x-show="templateForm" class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-10 overflow-y-auto" @click.self="templateForm = null">
                     <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-2xl mb-10 shadow-2xl">
-                        <h2 class="text-xl font-bold mb-5" x-text="templateForm?.id ? 'Edit template' : 'New template'"></h2>
+                        <h2 class="text-xl font-bold mb-2" x-text="templateForm?.id ? 'Edit template' : 'New template'"></h2>
 
-                        <div x-show="!templateForm?.id" class="flex items-center gap-2 mb-5">
+                        <div class="flex items-center gap-2 mb-5">
+                            <span class="text-xs text-gray-500 mr-1">Presets:</span>
                             <button type="button" @click="applyDefaultPhotoPreset()" :class="templateTypeTab === 'photo' ? 'bg-brand-600 hover:bg-brand-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'" class="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-2a2 2 0 110 4m-6 8a2 2 0 100-4m0 2a2 2 0 110-4m0 2v2m0 6V18m6-6v6m6-6v2m0 4v2"/></svg>
                                 Photo Default
