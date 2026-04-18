@@ -50,13 +50,14 @@ func (h *PlaygroundHandler) TestTransform(c *fiber.Ctx) error {
 	start := time.Now()
 
 	input := &provider.TransformInput{
-		Model:        req.Model,
-		ImageURL:     req.ImageURL,
-		MomImageURL:  req.MomImageURL,
-		BabyImageURL: req.BabyImageURL,
-		DadImageURL:  req.DadImageURL,
-		Prompt:       req.Prompt,
-		Params:       req.Params,
+		Model:           req.Model,
+		ImageURL:        req.ImageURL,
+		MomImageURL:     req.MomImageURL,
+		BabyImageURL:    req.BabyImageURL,
+		DadImageURL:     req.DadImageURL,
+		Prompt:          req.Prompt,
+		NegativePrompt:  req.NegativePrompt,
+		Params:          req.Params,
 	}
 
 	result, err := p.Transform(c.Context(), input)

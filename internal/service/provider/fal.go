@@ -13,6 +13,7 @@ import (
 
 const (
 	falBaseURL      = "https://fal.run"
+	falQueueURL     = "https://queue.fal.run"
 	falDefaultModel = "fal-ai/flux/dev/image-to-image"
 )
 
@@ -45,6 +46,10 @@ func (f *FalAI) Transform(ctx context.Context, input *TransformInput) (*Transfor
 		return nil, fmt.Errorf("fal.ai: marshal error: %w", err)
 	}
 
+	if isQueueModel(model) {
+		return f.transformViaQueue(ctx, model, payload)
+	}
+
 	url := fmt.Sprintf("%s/%s", falBaseURL, model)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
@@ -72,6 +77,135 @@ func (f *FalAI) Transform(ctx context.Context, input *TransformInput) (*Transfor
 	var result map[string]interface{}
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return nil, fmt.Errorf("fal.ai: unmarshal error: %w", err)
+	}
+
+	resultURL := extractResultURL(result)
+
+	return &TransformOutput{
+		ResultURL: resultURL,
+		Provider:  f.Name(),
+		Model:     model,
+		Metadata:  result,
+	}, nil
+}
+
+// transformViaQueue submits a request via fal.ai's queue API and polls for the result.
+// This is required for long-running models like Kling video that use async processing.
+func (f *FalAI) transformViaQueue(ctx context.Context, model string, payload map[string]interface{}) (*TransformOutput, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("fal.ai: marshal error: %w", err)
+	}
+
+	submitURL := fmt.Sprintf("%s/%s", falQueueURL, model)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, submitURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("fal.ai: queue submit request error: %w", err)
+	}
+	req.Header.Set("Authorization", "Key "+f.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := f.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fal.ai: queue submit failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("fal.ai: queue submit read error: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fal.ai: queue submit error (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var submitResult map[string]interface{}
+	if err := json.Unmarshal(respBody, &submitResult); err != nil {
+		return nil, fmt.Errorf("fal.ai: queue submit unmarshal error: %w", err)
+	}
+
+	requestID, _ := submitResult["request_id"].(string)
+	if requestID == "" {
+		return nil, fmt.Errorf("fal.ai: queue submit did not return request_id")
+	}
+
+	statusURL := fmt.Sprintf("%s/%s/requests/%s/status", falQueueURL, model, requestID)
+	resultURL := fmt.Sprintf("%s/%s/requests/%s", falQueueURL, model, requestID)
+
+	pollClient := &http.Client{Timeout: 30 * time.Second}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("fal.ai: queue poll cancelled: %w", ctx.Err())
+		default:
+		}
+
+		sReq, err := http.NewRequestWithContext(ctx, http.MethodGet, statusURL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("fal.ai: queue status request error: %w", err)
+		}
+		sReq.Header.Set("Authorization", "Key "+f.apiKey)
+
+		sResp, err := pollClient.Do(sReq)
+		if err != nil {
+			return nil, fmt.Errorf("fal.ai: queue status poll failed: %w", err)
+		}
+		sBody, _ := io.ReadAll(sResp.Body)
+		sResp.Body.Close()
+
+		var status map[string]interface{}
+		if err := json.Unmarshal(sBody, &status); err != nil {
+			return nil, fmt.Errorf("fal.ai: queue status unmarshal error: %w", err)
+		}
+
+		statusStr, _ := status["status"].(string)
+		switch statusStr {
+		case "COMPLETED":
+			goto fetchResult
+		case "IN_PROGRESS":
+			time.Sleep(3 * time.Second)
+			continue
+		case "IN_QUEUE":
+			time.Sleep(5 * time.Second)
+			continue
+		case "FAILED":
+			errMsg, _ := status["error"].(string)
+			if errMsg == "" {
+				errMsg = string(sBody)
+			}
+			return nil, fmt.Errorf("fal.ai: queue request failed: %s", errMsg)
+		default:
+			if strings.HasPrefix(strings.ToUpper(statusStr), "IN_") {
+				time.Sleep(3 * time.Second)
+				continue
+			}
+			return nil, fmt.Errorf("fal.ai: unexpected queue status: %s", string(sBody))
+		}
+	}
+
+fetchResult:
+	rReq, err := http.NewRequestWithContext(ctx, http.MethodGet, resultURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("fal.ai: queue result request error: %w", err)
+	}
+	rReq.Header.Set("Authorization", "Key "+f.apiKey)
+
+	rResp, err := pollClient.Do(rReq)
+	if err != nil {
+		return nil, fmt.Errorf("fal.ai: queue result fetch failed: %w", err)
+	}
+	defer rResp.Body.Close()
+
+	rBody, err := io.ReadAll(rResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("fal.ai: queue result read error: %w", err)
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(rBody, &result); err != nil {
+		return nil, fmt.Errorf("fal.ai: queue result unmarshal error: %w", err)
 	}
 
 	resultURL := extractResultURL(result)
@@ -123,6 +257,11 @@ func buildFalPayload(model string, input *TransformInput) map[string]interface{}
 		payload["reference_image_url"] = input.ImageURL
 	case isImageURLsModel(model):
 		payload["image_urls"] = imageURLs
+	case isKlingV26Model(model):
+		payload["start_image_url"] = input.ImageURL
+		if input.NegativePrompt != "" {
+			payload["negative_prompt"] = input.NegativePrompt
+		}
 	case isKlingVideoModel(model):
 		payload["image_url"] = input.ImageURL
 	default:
@@ -221,12 +360,20 @@ func isKlingVideoModel(model string) bool {
 	return strings.Contains(model, "kling-video") || strings.Contains(model, "kling/")
 }
 
+func isKlingV26Model(model string) bool {
+	return strings.Contains(model, "kling-video/v2") || strings.Contains(model, "kling-video/v3")
+}
+
 func isImageURLsModel(model string) bool {
 	return strings.Contains(model, "nano-banana") || strings.Contains(model, "gemini-image") || strings.Contains(model, "seedream")
 }
 
 func isNativeAspectRatioModel(model string) bool {
 	return strings.Contains(model, "nano-banana") || strings.Contains(model, "gemini-image")
+}
+
+func isQueueModel(model string) bool {
+	return isKlingVideoModel(model)
 }
 
 // extractResultURL extracts the media URL from various fal.ai response formats.
