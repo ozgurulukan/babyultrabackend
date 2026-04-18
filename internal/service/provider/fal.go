@@ -208,7 +208,7 @@ fetchResult:
 		return nil, fmt.Errorf("fal.ai: queue result unmarshal error: %w", err)
 	}
 
-	resultURL := extractResultURL(result)
+	resultURL = extractResultURL(result)
 
 	return &TransformOutput{
 		ResultURL: resultURL,
