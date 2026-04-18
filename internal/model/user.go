@@ -74,6 +74,9 @@ type Template struct {
 	AfterMediaURL   string    `json:"after_media_url"`
 	AfterMediaType  string    `json:"after_media_type" gorm:"default:image"`
 	ReferenceImageCount int   `json:"reference_image_count" gorm:"default:1"`
+	RequireMomPhoto  bool `json:"require_mom_photo" gorm:"default:false"`
+	RequireBabyPhoto bool `json:"require_baby_photo" gorm:"default:false"`
+	RequireDadPhoto  bool `json:"require_dad_photo" gorm:"default:false"`
 	HideFromAll           bool      `json:"hide_from_all" gorm:"default:false;index"`
 	AspectRatio           string    `json:"aspect_ratio" gorm:"default:1:1"`
 	SupportedAspectRatios string    `json:"supported_aspect_ratios" gorm:"type:text;default:1:1,4:5,9:16,16:9,3:4,4:3"`

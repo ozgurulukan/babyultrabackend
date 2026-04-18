@@ -318,18 +318,34 @@ Headers:
   X-Install-Seed: <stable_install_seed>
   Content-Type: application/json
 
-Body:
+Body (standart):
 {
-  "provider": "fal.ai",           // fal.ai | replicate | deepseek | openrouter | gemini
-  "model": "fal-ai/flux/dev/image-to-image",  // opsiyonel, varsayilan kullanilir
-  "image_url": "https://...",     // upload'dan gelen URL veya harici URL
+  "provider": "fal.ai",
+  "model": "fal-ai/flux/dev/image-to-image",
+  "image_url": "https://...",
   "prompt": "Make this a watercolor painting",
-  "params": {                     // opsiyonel, provider'a ozel parametreler
+  "params": {
     "strength": 0.8,
     "num_inference_steps": 30
   }
 }
+
+Body (family photo — anne/bebek/baba fotograflari ile):
+{
+  "provider": "fal.ai",
+  "model": "fal-ai/flux-pulid",
+  "image_url": "https://...",          // ana gorsel (e anne/bebek/baba fotografi gerekiyorsa yuklenir)
+  "prompt": "a professional photo of the family...",
+  "mom_image_url": "https://...",      // sadece template require_mom_photo=true ise
+  "baby_image_url": "https://...",     // sadece template require_baby_photo=true ise
+  "dad_image_url": "https://...",      // sadece template require_dad_photo=true ise
+  "params": {
+    "aspect_ratio": "1:1"
+  }
+}
 ```
+
+> **Not:** `mom_image_url`, `baby_image_url`, `dad_image_url` alanlari opsiyoneldir. Sadece ilgili template'in `require_mom_photo`, `require_baby_photo` veya `require_dad_photo` alanlari `true` ise gonderilir. Backend bu URL'leri dogrudan fal.ai payload'ina iletir.
 
 ### 4. Transform Yaniti
 
@@ -521,6 +537,68 @@ Some templates require **2 reference photos** from the user (e.g. compare/merge 
 
 When `reference_image_count = 2`, the app should collect **two uploads** and call transform with `image_urls`.
 
+**Family photos (Mom, Baby, Dad):**
+
+Some templates require **person photos** (family members) in addition to the main reference photo. This is used for AI models like *flux-pulid* or face-swap style flows where the AI needs separate face references for each family role. The app should request the user to upload separate photos for each checked role and **make them required** before submitting the transform request.
+
+Template fields:
+
+- `require_mom_photo = true/false` — Anne (mom) fotografini zorunlu kilar
+- `require_baby_photo = true/false` — Bebek (baby) fotografini zorunlu kilar
+- `require_dad_photo = true/false` — Baba (dad) fotografini zorunlu kilar
+
+All three default to `false`. When any is `true`:
+
+1. Mobil app ilgili template icin ayri yukleme alanlari gosterir (ornek: "Mom Photo", "Baby Photo", "Dad Photo")
+2. Kullanici tum zorunlu fotograflari yuklemeden transform istegi gonderemez
+3. Yuklenen fotograflar transform isteginde `mom_image_url`, `baby_image_url`, `dad_image_url` olarak gonderilir
+4. Backend bu URL'leri fal.ai payload'ina dogrudan iletir
+
+Mobil app'te template kart gorunumu (family photo required oldugunda):
+
+```
+┌─────────────────────────────────┐
+│  ┌─────────┐  ┌─────────┐      │
+│  │ BEFORE  │→ │ AFTER   │      │
+│  │(resim/  │  │(AI demo │      │
+│  │ video)  │  │ sonucu) │      │
+│  └─────────┘  └─────────┘      │
+│  Template Name          [PRO]  │
+│  Action: Image Generation      │
+│  👩 Mom Photo   👶 Baby Photo  │
+│  👨 Dad Photo   (required)     │
+│  1 kredi                       │
+└─────────────────────────────────┘
+```
+
+Template secildikten sonra yukleme ekrani:
+
+```
+┌────────────────────────────────────┐
+│  Upload Required Photos           │
+│                                    │
+│  ┌──────────────────────────┐     │
+│  │  [Upload Main Photo]      │     │  ← reference_image (her zaman)
+│  └──────────────────────────┘     │
+│                                    │
+│  ┌──────────────────────────┐     │
+│  │  [Upload Mom Photo]  *   │     │  ← require_mom_photo=true ise
+│  └──────────────────────────┘     │
+│                                    │
+│  ┌──────────────────────────┐     │
+│  │  [Upload Baby Photo] *   │     │  ← require_baby_photo=true ise
+│  └──────────────────────────┘     │
+│                                    │
+│  ┌──────────────────────────┐     │
+│  │  [Upload Dad Photo]  *   │     │  ← require_dad_photo=true ise
+│  └──────────────────────────┘     │
+│                                    │
+│  * = Required                     │
+│                                    │
+│           [Transform]              │
+└────────────────────────────────────┘
+```
+
 **Hide from "All" list (for quick-button-only templates):**
 
 Some templates (e.g. "Remove Background") should be accessible via **Quick Buttons** but **not** appear in the main **All** templates feed. This is controlled by:
@@ -633,6 +711,10 @@ Yanit:
         "before_media_type": "image",
         "after_media_url": "https://cdn.kepa.app/templates/after.jpg",
         "after_media_type": "image",
+        "reference_image_count": 1,
+        "require_mom_photo": false,
+        "require_baby_photo": false,
+        "require_dad_photo": false,
         "credit_cost": 1,
         "is_active": true,
         "is_featured": true,
@@ -908,6 +990,11 @@ GET /api/v1/languages
     - template.aspect_ratio varsayilan secili olarak gelir
     - Kullanici isterse farkli bir oran secer
     - Secilen oran transform isteginde params.aspect_ratio olarak gonderilir
+8c. Family photo gereksinimleri kontrolu:
+    - template.require_mom_photo, require_baby_photo, require_dad_photo alanalri kontrol edilir
+    - Herhangi biri true ise, app ilgili rol icin ayri yukleme alani gosterir (Mom Photo, Baby Photo, Dad Photo)
+    - Tum zorunlu fotograflar yuklenmeden transform butonu aktif degildir
+    - Yuklenen fotograflar once POST /api/v1/upload ile R2'ye yuklenir, ardindan transform isteginde mom_image_url, baby_image_url, dad_image_url olarak gonderilir
 9. action_type'a gore UI akisi belirlenir:
 
    image_generation:  Foto sec → ratio sec → upload → transform → sonuc
@@ -1127,6 +1214,9 @@ struct TransformRequest: Codable {
     let model: String?
     let imageUrl: String
     let imageUrls: [String]?
+    let momImageUrl: String?
+    let babyImageUrl: String?
+    let dadImageUrl: String?
     let prompt: String
     let params: [String: AnyCodable]?
 
@@ -1134,6 +1224,9 @@ struct TransformRequest: Codable {
         case provider, model, prompt, params
         case imageUrl = "image_url"
         case imageUrls = "image_urls"
+        case momImageUrl = "mom_image_url"
+        case babyImageUrl = "baby_image_url"
+        case dadImageUrl = "dad_image_url"
     }
 }
 
@@ -1219,6 +1312,30 @@ let body = TransformRequest(
 )
 ```
 
+Family photo (anne/bebek/baba fotograflari) ile kullanim:
+
+```swift
+// Template'in family photo gereksinimlerini kontrol et
+let needsMom = template.requireMomPhoto   // Bool
+let needsBaby = template.requireBabyPhoto  // Bool
+let needsDad = template.requireDadPhoto    // Bool
+
+// UI'da her require_*_photo = true icin ayri yukleme alani goster
+// Tum zorunlu fotograflar yuklendikten sonra transform istegini gonder
+
+let body = TransformRequest(
+    provider: template.provider,
+    model: template.model,
+    imageUrl: mainPhotoUrl,        // ana gorsel (her zaman gerekli)
+    imageUrls: nil,
+    momImageUrl: needsMom ? momPhotoUrl : nil,    // anne fotografi
+    babyImageUrl: needsBaby ? babyPhotoUrl : nil,  // bebek fotografi
+    dadImageUrl: needsDad ? dadPhotoUrl : nil,      // baba fotografi
+    prompt: template.prompt,
+    params: ["aspect_ratio": selectedRatio]
+)
+```
+
 Video template ile kullanim (Kling):
 
 ```swift
@@ -1259,6 +1376,9 @@ data class TransformRequest(
     val model: String? = null,
     @SerializedName("image_url") val imageUrl: String,
     @SerializedName("image_urls") val imageUrls: List<String>? = null,
+    @SerializedName("mom_image_url") val momImageUrl: String? = null,
+    @SerializedName("baby_image_url") val babyImageUrl: String? = null,
+    @SerializedName("dad_image_url") val dadImageUrl: String? = null,
     val prompt: String,
     val params: Map<String, Any>? = null
 )
@@ -1702,6 +1822,9 @@ func userNotificationCenter(_ center: UNUserNotificationCenter,
 | after_media_url     | string    | "Sonra" AI demo gorseli/videosu (R2 CDN)    |
 | after_media_type    | string    | image / video (default: image)              |
 | reference_image_count | int     | 1 veya 2 (default: 1)                      |
+| require_mom_photo   | bool      | Anne (mom) fotografini zorunlu kilar (default: false) |
+| require_baby_photo  | bool      | Bebek (baby) fotografini zorunlu kilar (default: false) |
+| require_dad_photo   | bool      | Baba (dad) fotografini zorunlu kilar (default: false) |
 | hide_from_all       | bool      | Index, "Tumu" listesinden gizle             |
 | aspect_ratio        | string    | Varsayilan en-boy orani (default: "1:1")   |
 | supported_aspect_ratios | text  | Desteklenen oranlar, virgul ile ayrilmis (default: "1:1,4:5,9:16,16:9,3:4,4:3") |

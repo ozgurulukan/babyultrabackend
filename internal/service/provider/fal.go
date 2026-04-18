@@ -129,6 +129,16 @@ func buildFalPayload(model string, input *TransformInput) map[string]interface{}
 		payload["image_url"] = input.ImageURL
 	}
 
+	if input.MomImageURL != "" {
+		payload["mom_image_url"] = input.MomImageURL
+	}
+	if input.BabyImageURL != "" {
+		payload["baby_image_url"] = input.BabyImageURL
+	}
+	if input.DadImageURL != "" {
+		payload["dad_image_url"] = input.DadImageURL
+	}
+
 	for k, v := range input.Params {
 		if k == "aspect_ratio" {
 			applyAspectRatio(payload, model, fmt.Sprintf("%v", v))

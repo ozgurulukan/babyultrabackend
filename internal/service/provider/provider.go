@@ -9,11 +9,14 @@ import (
 )
 
 type TransformInput struct {
-	Model    string                 `json:"model"`
-	ImageURL string                 `json:"image_url"`
-	ImageURLs []string              `json:"image_urls,omitempty"`
-	Prompt   string                 `json:"prompt"`
-	Params   map[string]interface{} `json:"params,omitempty"`
+	Model        string                 `json:"model"`
+	ImageURL     string                 `json:"image_url"`
+	ImageURLs    []string               `json:"image_urls,omitempty"`
+	MomImageURL  string                 `json:"mom_image_url,omitempty"`
+	BabyImageURL string                 `json:"baby_image_url,omitempty"`
+	DadImageURL  string                 `json:"dad_image_url,omitempty"`
+	Prompt       string                 `json:"prompt"`
+	Params       map[string]interface{} `json:"params,omitempty"`
 }
 
 type TransformOutput struct {

@@ -1,12 +1,15 @@
 package model
 
 type TransformRequest struct {
-	Provider string                 `json:"provider" validate:"required"`
-	Model    string                 `json:"model,omitempty"`
-	ImageURL string                 `json:"image_url" validate:"required"`
-	ImageURLs []string              `json:"image_urls,omitempty"`
-	Prompt   string                 `json:"prompt" validate:"required"`
-	Params   map[string]interface{} `json:"params,omitempty"`
+	Provider   string                 `json:"provider" validate:"required"`
+	Model      string                 `json:"model,omitempty"`
+	ImageURL   string                 `json:"image_url" validate:"required"`
+	ImageURLs  []string               `json:"image_urls,omitempty"`
+	MomImageURL  string               `json:"mom_image_url,omitempty"`
+	BabyImageURL string               `json:"baby_image_url,omitempty"`
+	DadImageURL  string               `json:"dad_image_url,omitempty"`
+	Prompt     string                 `json:"prompt" validate:"required"`
+	Params     map[string]interface{} `json:"params,omitempty"`
 }
 
 type ProviderTestRequest struct {
