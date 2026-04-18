@@ -134,10 +134,20 @@ func (f *FalAI) transformViaQueue(ctx context.Context, model string, payload map
 		return nil, fmt.Errorf("fal.ai: queue submit did not return request_id")
 	}
 
-	statusURL := fmt.Sprintf("%s/%s/requests/%s/status", falQueueURL, model, requestID)
-	resultURL := fmt.Sprintf("%s/%s/requests/%s", falQueueURL, model, requestID)
+	// Use status_url and response_url from submit response if available
+	// (fal.ai returns the correct polling URLs in the response)
+	statusURL, _ := submitResult["status_url"].(string)
+	resultURL, _ := submitResult["response_url"].(string)
+	if statusURL == "" {
+		statusURL = fmt.Sprintf("%s/%s/requests/%s/status", falQueueURL, model, requestID)
+	}
+	if resultURL == "" {
+		resultURL = fmt.Sprintf("%s/%s/requests/%s", falQueueURL, model, requestID)
+	}
 
-	pollClient := &http.Client{Timeout: 30 * time.Second}
+	log.Printf("fal.ai queue submitted model=%s request_id=%s status_url=%s response_url=%s", model, requestID, statusURL, resultURL)
+
+	pollClient := &http.Client{Timeout: 120 * time.Second}
 
 	for {
 		select {
@@ -151,25 +161,43 @@ func (f *FalAI) transformViaQueue(ctx context.Context, model string, payload map
 			return nil, fmt.Errorf("fal.ai: queue status request error: %w", err)
 		}
 		sReq.Header.Set("Authorization", "Key "+f.apiKey)
+		sReq.Header.Set("Accept", "application/json")
 
 		sResp, err := pollClient.Do(sReq)
 		if err != nil {
 			return nil, fmt.Errorf("fal.ai: queue status poll failed: %w", err)
 		}
-		sBody, _ := io.ReadAll(sResp.Body)
+		sBody, sReadErr := io.ReadAll(sResp.Body)
 		sResp.Body.Close()
+
+		if sResp.StatusCode != http.StatusOK {
+			log.Printf("fal.ai queue status error (status %d): %s", sResp.StatusCode, string(sBody))
+			return nil, fmt.Errorf("fal.ai: queue status error (status %d): %s", sResp.StatusCode, string(sBody))
+		}
+
+		if sReadErr != nil {
+			return nil, fmt.Errorf("fal.ai: queue status read error: %w", sReadErr)
+		}
+
+		if len(sBody) == 0 {
+			log.Printf("fal.ai queue status returned empty body for request %s, retrying...", requestID)
+			time.Sleep(3 * time.Second)
+			continue
+		}
 
 		var status map[string]interface{}
 		if err := json.Unmarshal(sBody, &status); err != nil {
+			log.Printf("fal.ai queue status unmarshal error for request %s: %v, body: %s", requestID, err, string(sBody))
 			return nil, fmt.Errorf("fal.ai: queue status unmarshal error: %w", err)
 		}
 
 		statusStr, _ := status["status"].(string)
+		log.Printf("fal.ai queue status for request %s: %s", requestID, statusStr)
 		switch statusStr {
 		case "COMPLETED":
 			goto fetchResult
 		case "IN_PROGRESS":
-			time.Sleep(3 * time.Second)
+			time.Sleep(5 * time.Second)
 			continue
 		case "IN_QUEUE":
 			time.Sleep(5 * time.Second)
@@ -195,6 +223,7 @@ fetchResult:
 		return nil, fmt.Errorf("fal.ai: queue result request error: %w", err)
 	}
 	rReq.Header.Set("Authorization", "Key "+f.apiKey)
+	rReq.Header.Set("Accept", "application/json")
 
 	rResp, err := pollClient.Do(rReq)
 	if err != nil {
@@ -205,6 +234,10 @@ fetchResult:
 	rBody, err := io.ReadAll(rResp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("fal.ai: queue result read error: %w", err)
+	}
+
+	if rResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fal.ai: queue result error (status %d): %s", rResp.StatusCode, string(rBody))
 	}
 
 	var result map[string]interface{}
