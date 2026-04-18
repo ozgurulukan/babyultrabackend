@@ -159,7 +159,7 @@ func (f *FalAI) transformViaQueue(ctx context.Context, model string, payload map
 	log.Printf("fal.ai queue submitted model=%s request_id=%s status_url=%s response_url=%s", model, requestID, statusURL, resultURL)
 
 	pollClient := &http.Client{
-		Timeout: 120 * time.Second,
+		Timeout: 300 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
 				return fmt.Errorf("stopped after 10 redirects")

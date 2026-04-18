@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/ozgurulukan/bubsiebackend/internal/config"
@@ -42,9 +43,11 @@ func main() {
 	)
 
 	app := fiber.New(fiber.Config{
-		AppName:      "Bubsie Api",
-		ServerHeader: "",
-		BodyLimit:    50 * 1024 * 1024,
+		AppName:       "Bubsie Api",
+		ServerHeader:  "",
+		BodyLimit:     50 * 1024 * 1024,
+		ReadTimeout:   360 * time.Second,
+		WriteTimeout:  360 * time.Second,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			msg := "internal server error"
