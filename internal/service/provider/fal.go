@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -45,6 +46,8 @@ func (f *FalAI) Transform(ctx context.Context, input *TransformInput) (*Transfor
 	if err != nil {
 		return nil, fmt.Errorf("fal.ai: marshal error: %w", err)
 	}
+
+	log.Printf("fal.ai payload for model %s: %s", model, string(body))
 
 	if isQueueModel(model) {
 		return f.transformViaQueue(ctx, model, payload)
@@ -117,6 +120,7 @@ func (f *FalAI) transformViaQueue(ctx context.Context, model string, payload map
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("fal.ai queue submit error for model %s (status %d): %s", model, resp.StatusCode, string(respBody))
 		return nil, fmt.Errorf("fal.ai: queue submit error (status %d): %s", resp.StatusCode, string(respBody))
 	}
 
