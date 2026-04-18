@@ -27,10 +27,13 @@ type ToggleProviderRequest struct {
 }
 
 type PlaygroundRequest struct {
-	Provider   string                 `json:"provider"`
-	Model      string                 `json:"model,omitempty"`
-	Prompt     string                 `json:"prompt"`
-	ImageURL   string                 `json:"image_url,omitempty"`
-	ActionType string                 `json:"action_type,omitempty"`
-	Params     map[string]interface{} `json:"params,omitempty"`
+	Provider     string                 `json:"provider"`
+	Model        string                 `json:"model,omitempty"`
+	Prompt       string                 `json:"prompt"`
+	ImageURL     string                 `json:"image_url,omitempty"`
+	MomImageURL  string                 `json:"mom_image_url,omitempty"`
+	BabyImageURL string                 `json:"baby_image_url,omitempty"`
+	DadImageURL  string                 `json:"dad_image_url,omitempty"`
+	ActionType   string                 `json:"action_type,omitempty"`
+	Params       map[string]interface{} `json:"params,omitempty"`
 }
