@@ -1341,12 +1341,28 @@
             </div>
 
             <!-- Playground Tab -->
-            <div x-show="tab === 'playground'" class="fade-in">
+            <div x-show="tab === 'playground'" class="fade-in" x-init="$watch('tab', v => { if(v === 'playground') { fetchTemplatesForPlayground(pgTypeTab); } })">
                 <div class="flex items-center justify-between mb-6">
                     <div>
                         <h1 class="text-2xl font-bold">Playground</h1>
                         <p class="text-sm text-gray-500 mt-1">Test templates before publishing. Try different transformation modes.</p>
                     </div>
+                </div>
+
+                <!-- Playground Type Tabs -->
+                <div class="inline-flex bg-gray-900 border border-gray-800 rounded-xl p-1 mb-6">
+                    <button
+                        @click="pgTypeTab = 'photo'; pg.templateId = 0; fetchTemplatesForPlayground('photo')"
+                        :class="pgTypeTab === 'photo' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Photo
+                    </button>
+                    <button
+                        @click="pgTypeTab = 'video'; pg.templateId = 0; fetchTemplatesForPlayground('video')"
+                        :class="pgTypeTab === 'video' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Video
+                    </button>
                 </div>
 
                 <!-- Mode Selector -->
@@ -1897,6 +1913,8 @@
                 { value: 'audio_to_text', label: 'Ses → Metin', icon: '🎙️', needsInput: true }
             ],
 
+            pgTypeTab: 'photo',
+
             pg: {
                 mode: 'text_to_image',
                 templateId: 0,
@@ -2288,6 +2306,13 @@
                 const cats = this.allCategories || [];
                 if (type === 'photo') return cats.filter(c => !c.type || c.type === 'photo');
                 return cats.filter(c => c.type === type);
+            },
+
+            async fetchTemplatesForPlayground(type) {
+                try {
+                    const data = await this.api('/api/admin/templates?type=' + encodeURIComponent(type));
+                    this.templates = data.templates || [];
+                } catch(e) { this.showToast('Failed to load templates', 'error'); }
             },
 
             async openNewTemplate() {
