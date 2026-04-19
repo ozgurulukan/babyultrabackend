@@ -1165,7 +1165,7 @@ func (h *ContentHandler) AdminDeleteNote(c *fiber.Ctx) error {
 }
 
 func guessMediaExtension(contentType, filename string) string {
-	case strings.Contains(contentType, "png"):
+	switch {
 		return ".png"
 	case strings.Contains(contentType, "webp"):
 		return ".webp"
