@@ -156,6 +156,11 @@ func Setup(
 	admin.Post("/playground", playgroundHandler.TestTransform)
 	admin.Get("/playground/meta", playgroundHandler.PlaygroundMeta)
 
+	admin.Get("/notes", contentHandler.AdminListNotes)
+	admin.Post("/notes", contentHandler.AdminCreateNote)
+	admin.Put("/notes/:id", contentHandler.AdminUpdateNote)
+	admin.Delete("/notes/:id", contentHandler.AdminDeleteNote)
+
 	admin.Get("/notifications/stats", notificationHandler.AdminTokenStats)
 	admin.Post("/notifications/send", notificationHandler.AdminSendNotification)
 

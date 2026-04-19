@@ -1106,8 +1106,65 @@ func nonEmpty(newVal, existing string) string {
 	return existing
 }
 
+func (h *ContentHandler) AdminListNotes(c *fiber.Ctx) error {
+	db := database.GetDB()
+	var notes []model.Note
+	db.Order("sort_order asc, created_at desc").Find(&notes)
+	return model.SuccessResponse(c, fiber.Map{"notes": notes})
+}
+
+func (h *ContentHandler) AdminCreateNote(c *fiber.Ctx) error {
+	var note model.Note
+	if err := c.BodyParser(&note); err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body")
+	}
+	if note.Title == "" {
+		note.Title = "Untitled"
+	}
+	db := database.GetDB()
+	if err := db.Create(&note).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to create note: "+err.Error())
+	}
+	return model.SuccessResponse(c, note)
+}
+
+func (h *ContentHandler) AdminUpdateNote(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid id")
+	}
+	db := database.GetDB()
+	var existing model.Note
+	if err := db.First(&existing, id).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusNotFound, "note not found")
+	}
+	var updates model.Note
+	if err := c.BodyParser(&updates); err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body")
+	}
+	db.Model(&existing).Updates(map[string]interface{}{
+		"title":      updates.Title,
+		"content":    updates.Content,
+		"color":      updates.Color,
+		"sort_order": updates.SortOrder,
+	})
+	db.First(&existing, id)
+	return model.SuccessResponse(c, existing)
+}
+
+func (h *ContentHandler) AdminDeleteNote(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid id")
+	}
+	db := database.GetDB()
+	if db.Delete(&model.Note{}, id).RowsAffected == 0 {
+		return model.ErrorResponse(c, fiber.StatusNotFound, "note not found")
+	}
+	return model.SuccessResponse(c, fiber.Map{"deleted": true})
+}
+
 func guessMediaExtension(contentType, filename string) string {
-	switch {
 	case strings.Contains(contentType, "png"):
 		return ".png"
 	case strings.Contains(contentType, "webp"):
