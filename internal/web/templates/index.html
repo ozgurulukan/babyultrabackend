@@ -2363,6 +2363,7 @@
                 this.templateForm.model = 'fal-ai/bytedance/seedream/v4/edit';
                 this.templateForm.params = '{\n  "num_images": 1,\n  "enhance_prompt_mode": "standard",\n  "enable_safety_checker": true\n}';
                 this.templateForm.negative_prompt = '';
+                this.templateForm.credit_cost = 5;
             },
 
             applyDefaultVideoPreset() {
@@ -2374,6 +2375,7 @@
                 this.templateForm.negative_prompt = 'facial morphing, changing facial features, loss of original likeness, face swapping, mutating face, distorted eyes, asymmetrical face, melting features, artificial skin, CGI, 3D render, cartoon, poor anatomy, extra limbs, bad proportions, sudden head movements, extreme expressions, jitter, blurry, low resolution';
                 this.templateForm.before_media_type = 'image';
                 this.templateForm.after_media_type = 'video';
+                this.templateForm.credit_cost = 25;
             },
 
             async fetchTemplates() {
