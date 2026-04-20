@@ -566,9 +566,11 @@
                                 <div><label class="block text-xs text-gray-400 mb-1">Slug</label>
                                     <input x-model="categoryForm.slug" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="face"></div>
                             </div>
-                            <div><label class="block text-xs text-gray-400 mb-1">Description</label>
-                                <input x-model="categoryForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
-                            <div class="grid grid-cols-2 gap-4">
+                             <div><label class="block text-xs text-gray-400 mb-1">Description</label>
+                                 <input x-model="categoryForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
+                             <div><label class="block text-xs text-gray-400 mb-1">App ID</label>
+                                 <input x-model="categoryForm.app_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="default"></div>
+                             <div class="grid grid-cols-2 gap-4">
                                 <div><label class="block text-xs text-gray-400 mb-1">Order</label>
                                     <input x-model.number="categoryForm.sort_order" type="number" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
                                 <div class="flex items-end"><label class="flex items-center gap-2 cursor-pointer">
@@ -670,8 +672,11 @@
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1">Slug</label>
                                 <input x-model="templateForm.slug" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="remove-braces">
+                             </div>
+                             <div>
+                                <label class="block text-xs text-gray-400 mb-1">App ID</label>
+                                <input x-model="templateForm.app_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="default">
                             </div>
-                            <input type="hidden" x-model="templateForm.app_id">
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1">Aksiyon Tipi</label>
                                 <select x-model="templateForm.action_type" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
