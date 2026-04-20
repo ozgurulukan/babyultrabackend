@@ -327,6 +327,15 @@ func buildFalPayload(model string, input *TransformInput) map[string]interface{}
 			payload["reference_image_url"] = input.ImageURL
 		}
 	case isImageURLsModel(model):
+		if len(imageURLs) == 0 {
+			if input.BabyImageURL != "" {
+				imageURLs = []string{input.BabyImageURL}
+			} else if input.MomImageURL != "" {
+				imageURLs = []string{input.MomImageURL}
+			} else if input.DadImageURL != "" {
+				imageURLs = []string{input.DadImageURL}
+			}
+		}
 		payload["image_urls"] = imageURLs
 	case isKlingV26Model(model):
 		if input.ImageURL != "" {
