@@ -317,6 +317,9 @@ func buildFalPayload(model string, input *TransformInput) map[string]interface{}
 	if len(imageURLs) == 0 && input.ImageURL != "" {
 		imageURLs = []string{input.ImageURL}
 	}
+	if imageURLs == nil {
+		imageURLs = []string{}
+	}
 
 	switch {
 	case isPuLIDModel(model):
@@ -324,9 +327,7 @@ func buildFalPayload(model string, input *TransformInput) map[string]interface{}
 			payload["reference_image_url"] = input.ImageURL
 		}
 	case isImageURLsModel(model):
-		if len(imageURLs) > 0 {
-			payload["image_urls"] = imageURLs
-		}
+		payload["image_urls"] = imageURLs
 	case isKlingV26Model(model):
 		if input.ImageURL != "" {
 			payload["start_image_url"] = input.ImageURL
