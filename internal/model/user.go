@@ -86,6 +86,8 @@ type Template struct {
 	IsFree          bool      `json:"is_free" gorm:"default:false"`
 	IsActive        bool      `json:"is_active" gorm:"default:true;index"`
 	IsFeatured      bool      `json:"is_featured" gorm:"default:false;index"`
+	IsPopular       bool      `json:"is_popular" gorm:"default:false;index"`
+	IsViral         bool      `json:"is_viral" gorm:"default:false;index"`
 	IsPremium       bool      `json:"is_premium" gorm:"default:false"`
 	SortOrder       int       `json:"sort_order" gorm:"default:0"`
 	CreatedAt       time.Time `json:"created_at"`

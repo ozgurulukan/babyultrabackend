@@ -52,12 +52,12 @@ func (h *ContentHandler) GetCategories(c *fiber.Ctx) error {
 		h.applyTranslations(categories, "category", lang)
 	}
 
-	// App-level category tabs should always start with: All, Popular, Trending
+	// App-level category tabs should always start with: All, Popular, Viral
 	// These are virtual "categories" (id=0) and are always English.
 	virtual := []fiber.Map{
 		{"id": 0, "type": catType, "slug": "all", "name": "All", "description": "", "is_active": true, "sort_order": -4, "is_virtual": true, "filter": "all"},
 		{"id": 0, "type": catType, "slug": "popular", "name": "Popular", "description": "", "is_active": true, "sort_order": -3, "is_virtual": true, "filter": "popular"},
-		{"id": 0, "type": catType, "slug": "trending", "name": "Trending", "description": "", "is_active": true, "sort_order": -2, "is_virtual": true, "filter": "trending"},
+		{"id": 0, "type": catType, "slug": "viral", "name": "Viral", "description": "", "is_active": true, "sort_order": -2, "is_virtual": true, "filter": "viral"},
 		{"id": 0, "type": catType, "slug": "other", "name": "Other", "description": "", "is_active": true, "sort_order": -1, "is_virtual": true, "filter": "other"},
 	}
 	out := make([]interface{}, 0, len(virtual)+len(categories))
@@ -87,7 +87,10 @@ func (h *ContentHandler) GetTemplates(c *fiber.Ctx) error {
 	categoryID := c.QueryInt("category_id", 0)
 	featured := c.Query("featured", "")
 	popular := c.Query("popular", "")
-	trending := c.Query("trending", "")
+	viral := c.Query("viral", "")
+	if viral == "" {
+		viral = c.Query("trending", "") // backward compatibility
+	}
 	catType := strings.TrimSpace(c.Query("type", ""))
 	includeHidden := c.Query("include_hidden", "") == "true"
 	lang := c.Query("lang", "")
@@ -99,12 +102,18 @@ func (h *ContentHandler) GetTemplates(c *fiber.Ctx) error {
 	if featured == "true" {
 		query = query.Where("templates.is_featured = ?", true)
 	}
+	if popular == "true" {
+		query = query.Where("templates.is_popular = ?", true)
+	}
+	if viral == "true" {
+		query = query.Where("templates.is_viral = ?", true)
+	}
 
-	if !includeHidden && categoryID == 0 && featured != "true" && popular != "true" && trending != "true" {
+	if !includeHidden && categoryID == 0 && featured != "true" && popular != "true" && viral != "true" {
 		query = query.Where("templates.hide_from_all = ?", false)
 	}
 
-	needsJoin := catType != "" || popular == "true" || trending == "true"
+	needsJoin := catType != ""
 	if needsJoin {
 		query = query.Joins("LEFT JOIN categories ON categories.id = templates.category_id")
 
@@ -114,12 +123,6 @@ func (h *ContentHandler) GetTemplates(c *fiber.Ctx) error {
 			} else {
 				query = query.Where("categories.type = ?", catType)
 			}
-		}
-		if popular == "true" {
-			query = query.Where("categories.is_popular = ?", true)
-		}
-		if trending == "true" {
-			query = query.Where("categories.is_trending = ?", true)
 		}
 	}
 
@@ -604,6 +607,8 @@ func (h *ContentHandler) AdminUpdateTemplate(c *fiber.Ctx) error {
 		"require_dad_photo":       updates.RequireDadPhoto,
 		"is_active":        updates.IsActive,
 		"is_featured":      updates.IsFeatured,
+		"is_popular":       updates.IsPopular,
+		"is_viral":         updates.IsViral,
 		"is_premium":       updates.IsPremium,
 		"sort_order":       updates.SortOrder,
 	})

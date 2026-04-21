@@ -860,7 +860,7 @@
                             <input x-model="templateForm.params" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder='{"strength": 0.8, "num_inference_steps": 30}'>
                         </div>
 
-                        <div class="mt-4 grid grid-cols-4 gap-4">
+                        <div class="mt-4 grid grid-cols-5 gap-4">
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1">Order</label>
                                 <input x-model.number="templateForm.sort_order" type="number" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
@@ -873,8 +873,14 @@
                             </div>
                             <div class="flex items-end">
                                 <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" x-model="templateForm.is_featured" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
-                                    <span class="text-sm">Featured</span>
+                                    <input type="checkbox" x-model="templateForm.is_popular" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                    <span class="text-sm">Popular</span>
+                                </label>
+                            </div>
+                            <div class="flex items-end">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="templateForm.is_viral" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
+                                    <span class="text-sm">Viral</span>
                                 </label>
                             </div>
                             <div class="flex items-end">
@@ -946,7 +952,8 @@
                                             <span x-text="t.name"></span>
                                             <span class="px-1.5 py-0.5 rounded text-[10px] font-medium" :class="t.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'" x-text="t.is_active ? 'ACTIVE' : 'INACTIVE'"></span>
                                             <span class="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded text-[10px] font-medium" x-text="(t.action_type||'image_generation').replace(/_/g,' ')"></span>
-                                            <span x-show="t.is_featured" class="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded text-[10px] font-medium">FEATURED</span>
+                                            <span x-show="t.is_popular" class="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded text-[10px] font-medium">POPULAR</span>
+                                            <span x-show="t.is_viral" class="px-1.5 py-0.5 bg-pink-500/10 text-pink-400 rounded text-[10px] font-medium">VIRAL</span>
                                             <span x-show="t.is_premium" class="px-1.5 py-0.5 bg-yellow-500/10 text-yellow-400 rounded text-[10px] font-medium">PRO</span>
                                             <span x-show="t.is_free" class="px-1.5 py-0.5 bg-green-500/10 text-green-400 rounded text-[10px] font-medium">FREE</span>
                                             <span x-show="t.aspect_ratio" class="px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded text-[10px] font-medium" x-text="t.aspect_ratio || '1:1'"></span>
@@ -2438,7 +2445,7 @@
                 { value:'image_to_text', label:'Image to Text' },
             ],
             newTemplateForm() {
-                return { app_id:'default', slug:'', name:'', description:'', action_type:'image_generation', prompt:'', negative_prompt:'', provider:'fal.ai', model:'', category_id:0, before_media_url:'', before_media_type:'image', after_media_url:'', after_media_type:'image', reference_image_count: 1, hide_from_all: false, require_mom_photo: false, require_baby_photo: false, require_dad_photo: false, aspect_ratio:'1:1', supported_aspect_ratios:'1:1,4:5,9:16,16:9,3:4,4:3', icon_url:'', params:'', credit_cost:1, is_free:false, is_active:true, is_featured:false, is_premium:false, sort_order:0 };
+                return { app_id:'default', slug:'', name:'', description:'', action_type:'image_generation', prompt:'', negative_prompt:'', provider:'fal.ai', model:'', category_id:0, before_media_url:'', before_media_type:'image', after_media_url:'', after_media_type:'image', reference_image_count: 1, hide_from_all: false, require_mom_photo: false, require_baby_photo: false, require_dad_photo: false, aspect_ratio:'1:1', supported_aspect_ratios:'1:1,4:5,9:16,16:9,3:4,4:3', icon_url:'', params:'', credit_cost:1, is_free:false, is_active:true, is_popular:false, is_viral:false, is_premium:false, sort_order:0 };
             },
 
             applyDefaultPhotoPreset() {

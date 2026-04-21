@@ -175,7 +175,7 @@ bubsiebackend/
 | POST   | `/api/v1/transform`     | Gorsel donusturme istegi (AI proxy)                        |
 | GET    | `/api/v1/history`       | Kullanicinin gecmis transform'lari                         |
 | GET    | `/api/v1/categories`    | Kategoriler (?app_id=xx&lang=en)                           |
-| GET    | `/api/v1/templates`     | Template listesi (?app_id=xx&category_id=1&featured=true&lang=en)|
+| GET    | `/api/v1/templates`     | Template listesi (?app_id=xx&category_id=1&popular=true&viral=true&lang=en)|
 | GET    | `/api/v1/slider`        | Slider/Banner listesi (?app_id=xx&lang=en)                 |
 | GET    | `/api/v1/quick-buttons` | Slider altı 4 buton (type=photo\|video)                    |
 | GET    | `/api/v1/onboarding`    | Onboarding medyalari (?app_id=xx&lang=en)                  |
@@ -526,7 +526,8 @@ Backend, her uygulamaya ozel AI sablonlarini panelden yonetmeye olanak tanir:
 
 - **Tekli App** (orn: Dis Teli Temizleme): Tek bir template, sabit prompt
 - **Coklu App** (orn: Template Gallery): Birden fazla template, kategori bazli
-- **is_featured=true** template'ler slider'da one cikarilabilir
+- **is_popular=true** template'ler app'te **Popular** listesinde gosterilir
+- **is_viral=true** template'ler app'te **Viral** listesinde gosterilir
 
 **Reference photos (1 or 2):**
 
@@ -686,7 +687,8 @@ Yanit:
 ```
 GET /api/v1/templates?app_id=braces-app&lang=tr
 GET /api/v1/templates?app_id=multi-app&category_id=2&lang=en
-GET /api/v1/templates?app_id=multi-app&featured=true&lang=en
+GET /api/v1/templates?app_id=multi-app&popular=true&lang=en
+GET /api/v1/templates?app_id=multi-app&viral=true&lang=en
 GET /api/v1/templates?action_type=remove_bg&lang=en
 ```
 
@@ -717,7 +719,8 @@ Yanit:
         "require_dad_photo": false,
         "credit_cost": 1,
         "is_active": true,
-        "is_featured": true,
+        "is_popular": true,
+        "is_viral": false,
         "is_premium": false,
         "sort_order": 0
       }
@@ -1832,7 +1835,8 @@ func userNotificationCenter(_ center: UNUserNotificationCenter,
 | params              | text/JSON | Provider'a ozel parametreler                |
 | credit_cost         | int       | Bu islem kac kredi (default: 1)             |
 | is_active           | bool      | Index, aktif/pasif                          |
-| is_featured         | bool      | Index, slider'da one cikarilacak mi         |
+| is_popular          | bool      | Index, app'te Popular listesine dahil et     |
+| is_viral            | bool      | Index, app'te Viral listesine dahil et       |
 | is_premium          | bool      | Pro kullanicilar icin mi                    |
 | sort_order          | int       | Siralama                                    |
 | created_at          | datetime  |                                             |
