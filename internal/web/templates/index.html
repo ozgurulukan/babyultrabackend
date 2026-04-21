@@ -964,6 +964,9 @@
                                             <span x-text="'Provider: ' + (t.provider || '—')"></span>
                                             <span x-show="t.category_id" x-text="'Kategori: ' + (allCategories.find(c=>c.id===t.category_id)?.name || t.category_id)"></span>
                                             <span x-text="'Slug: ' + t.slug" class="text-gray-600"></span>
+                                            <span x-text="'App ID: ' + (t.app_id || '—')"></span>
+                                            <span x-text="'Model: ' + (t.model || '—')"></span>
+                                            <span x-text="'Kredi: ' + (t.credit_cost || 0)"></span>
                                         </div>
                                         <div x-show="t.require_mom_photo || t.require_baby_photo || t.require_dad_photo" class="flex items-center gap-2 mt-1">
                                             <span x-show="t.require_mom_photo" class="px-1.5 py-0.5 bg-pink-500/10 text-pink-400 rounded text-[10px] font-medium">Mom</span>
