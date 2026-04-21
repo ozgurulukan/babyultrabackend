@@ -566,10 +566,20 @@
                                 <div><label class="block text-xs text-gray-400 mb-1">Slug</label>
                                     <input x-model="categoryForm.slug" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="face"></div>
                             </div>
-                             <div><label class="block text-xs text-gray-400 mb-1">Description</label>
-                                 <input x-model="categoryForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
+<div><label class="block text-xs text-gray-400 mb-1">Description</label>
+                                  <input x-model="categoryForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
+                             <div>
+                                 <label class="block text-xs text-gray-400 mb-1">Icon (PNG/SVG) <span class="text-gray-600">optional</span></label>
+                                 <div class="flex gap-2">
+                                     <input x-model="categoryForm.icon_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="https://cdn.../icon.svg">
+                                     <button @click="uploadCategoryIcon()" :disabled="categoryUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                     </button>
+                                 </div>
+                                 <img x-show="categoryForm.icon_url" :src="categoryForm.icon_url" class="mt-2 h-14 w-14 rounded-lg object-contain bg-gray-800 border border-gray-700 p-2">
+                             </div>
                              <div><label class="block text-xs text-gray-400 mb-1">App ID</label>
-                                 <input x-model="categoryForm.app_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="default"></div>
+                                  <input x-model="categoryForm.app_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="default"></div>
                              <div class="grid grid-cols-2 gap-4">
                                 <div><label class="block text-xs text-gray-400 mb-1">Order</label>
                                     <input x-model.number="categoryForm.sort_order" type="number" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"></div>
@@ -600,14 +610,22 @@
                 <div class="grid gap-3">
                     <template x-for="cat in categories" :key="cat.id">
                         <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between">
-                            <div>
-                                <h3 class="font-semibold flex items-center gap-2">
-                                    <span x-text="cat.name"></span>
-                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-medium" :class="cat.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'" x-text="cat.is_active ? 'ACTIVE' : 'INACTIVE'"></span>
-                                    <span x-show="cat.is_popular" class="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded text-[10px] font-medium">POPULAR</span>
-                                    <span x-show="cat.is_trending" class="px-1.5 py-0.5 bg-orange-500/10 text-orange-400 rounded text-[10px] font-medium">TRENDING</span>
-                                </h3>
-                                <p class="text-xs text-gray-500 mt-1" x-text="'Slug: ' + cat.slug + (cat.description ? ' • ' + cat.description : '')"></p>
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div x-show="cat.icon_url" class="w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                    <img :src="cat.icon_url" class="w-8 h-8 object-contain">
+                                </div>
+                                <div x-show="!cat.icon_url" class="w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-gray-600 text-xs font-bold" x-text="cat.name ? cat.name.charAt(0).toUpperCase() : ''"></span>
+                                </div>
+                                <div class="min-w-0">
+                                    <h3 class="font-semibold flex items-center gap-2">
+                                        <span x-text="cat.name"></span>
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-medium" :class="cat.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'" x-text="cat.is_active ? 'ACTIVE' : 'INACTIVE'"></span>
+                                        <span x-show="cat.is_popular" class="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded text-[10px] font-medium">POPULAR</span>
+                                        <span x-show="cat.is_trending" class="px-1.5 py-0.5 bg-orange-500/10 text-orange-400 rounded text-[10px] font-medium">TRENDING</span>
+                                    </h3>
+                                    <p class="text-xs text-gray-500 mt-1" x-text="'Slug: ' + cat.slug + (cat.description ? ' • ' + cat.description : '')"></p>
+                                </div>
                             </div>
                             <div class="flex items-center gap-2">
                                 <button @click="translateEntity('category', cat.id)" :disabled="translating['category_'+cat.id]" class="px-2 py-1.5 bg-purple-900/30 hover:bg-purple-900/60 text-purple-400 rounded-lg text-xs font-medium transition disabled:opacity-50" title="Translate to all languages">
@@ -1930,6 +1948,7 @@
             allCategories: [],
             categories: [],
             categoryForm: null,
+            categoryUploading: false,
             categoryTypeTab: 'photo',
             templates: [],
             templateForm: null,
@@ -2236,6 +2255,22 @@
                 if (!confirm('Bu kategori silinecek. Emin misiniz?')) return;
                 try { await this.api('/api/admin/categories/' + id, { method:'DELETE' }); this.fetchCategories(); this.showToast('Deleted'); }
                 catch(e) { this.showToast('Delete failed: ' + e.message, 'error'); }
+            },
+            async uploadCategoryIcon() {
+                const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*,.svg';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0]; if (!file) return;
+                    this.categoryUploading = true;
+                    try {
+                        const fd = new FormData(); fd.append('file', file); fd.append('folder', 'categories');
+                        const token = await window._firebaseAuth.getToken();
+                        const resp = await fetch('/api/admin/upload-media', { method:'POST', headers:{'Authorization':'Bearer '+token}, body:fd });
+                        const json = await resp.json();
+                        if (json.success) { this.categoryForm.icon_url = json.data.url; this.showToast('Uploaded'); }
+                        else this.showToast(json.error, 'error');
+                    } catch(e) { this.showToast('Upload failed', 'error'); }
+                    finally { this.categoryUploading = false; }
+                }; input.click();
             },
 
             // ─── Slider Methods ─────────────────────────

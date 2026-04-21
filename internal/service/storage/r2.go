@@ -216,6 +216,8 @@ func guessExtension(contentType, url string) string {
 		return ".jpg"
 	case strings.Contains(contentType, "mp4"), strings.Contains(contentType, "video"):
 		return ".mp4"
+	case strings.Contains(contentType, "svg"):
+		return ".svg"
 	case strings.Contains(contentType, "webm"):
 		return ".webm"
 	}

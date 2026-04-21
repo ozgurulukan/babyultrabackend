@@ -1176,6 +1176,8 @@ func guessMediaExtension(contentType, filename string) string {
 		return ".jpg"
 	case strings.Contains(contentType, "mp4"), strings.Contains(contentType, "video"):
 		return ".mp4"
+	case strings.Contains(contentType, "svg"):
+		return ".svg"
 	case strings.Contains(contentType, "webm"):
 		return ".webm"
 	case strings.Contains(contentType, "mov"), strings.Contains(contentType, "quicktime"):
