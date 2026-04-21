@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -26,6 +28,28 @@ type UserHandler struct {
 
 func NewUserHandler(cfg *config.Config, registry *provider.Registry, st *storage.R2Storage) *UserHandler {
 	return &UserHandler{cfg: cfg, registry: registry, storage: st}
+}
+
+// POST /api/v1/me/pro
+func (h *UserHandler) ActivatePro(c *fiber.Ctx) error {
+	uid, _ := c.Locals("uid").(string)
+	if uid == "" {
+		return model.ErrorResponse(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	db := database.GetDB()
+	if err := db.Model(&model.User{}).
+		Where("firebase_uid = ?", uid).
+		Updates(map[string]interface{}{
+			"is_pro":     true,
+			"updated_at": time.Now(),
+		}).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
+	}
+
+	return model.SuccessResponse(c, fiber.Map{
+		"is_pro": true,
+	})
 }
 
 // GET /api/v1/me
@@ -173,6 +197,27 @@ func (h *UserHandler) GetHistory(c *fiber.Ctx) error {
 		"page":    page,
 		"limit":   limit,
 	})
+}
+
+// DELETE /api/v1/history/:id
+func (h *UserHandler) DeleteHistoryItem(c *fiber.Ctx) error {
+	uid, _ := c.Locals("uid").(string)
+	idParam := strings.TrimSpace(c.Params("id"))
+	id, err := strconv.Atoi(idParam)
+	if uid == "" || err != nil || id <= 0 {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid history item")
+	}
+
+	db := database.GetDB()
+	result := db.Where("id = ? AND firebase_uid = ?", id, uid).Delete(&model.RequestLog{})
+	if result.Error != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to delete history item")
+	}
+	if result.RowsAffected == 0 {
+		return model.ErrorResponse(c, fiber.StatusNotFound, "history item not found")
+	}
+
+	return model.SuccessResponse(c, fiber.Map{"deleted": true})
 }
 
 // POST /api/v1/upload
