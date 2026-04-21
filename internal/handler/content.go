@@ -144,7 +144,6 @@ func (h *ContentHandler) GetSlider(c *fiber.Ctx) error {
 	now := time.Now()
 
 	var items []model.SliderItem
-	// Match requested app_id OR fallback to "default" records for backward compatibility
 	q := db.Where("is_active = ? AND (app_id = ? OR app_id = 'default') AND (starts_at IS NULL OR starts_at <= ?) AND (ends_at IS NULL OR ends_at >= ?)",
 		true, appID, now, now).
 		Order("sort_order asc")
