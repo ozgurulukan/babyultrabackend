@@ -815,6 +815,9 @@ func (h *ContentHandler) AdminUploadMedia(c *fiber.Ctx) error {
 	}
 
 	contentType := http.DetectContentType(data)
+	if strings.HasSuffix(strings.ToLower(file.Filename), ".svg") || isSVGData(data) {
+		contentType = "image/svg+xml"
+	}
 	ext := guessMediaExtension(contentType, file.Filename)
 
 	randomBytes := make([]byte, 8)
@@ -1188,4 +1191,13 @@ func guessMediaExtension(contentType, filename string) string {
 		return filename[idx:]
 	}
 	return ".bin"
+}
+
+func isSVGData(data []byte) bool {
+	n := len(data)
+	if n > 512 {
+		n = 512
+	}
+	prefix := strings.ToLower(string(data[:n]))
+	return strings.Contains(prefix, "<svg")
 }
