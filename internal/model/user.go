@@ -83,6 +83,7 @@ type Template struct {
 	IconURL               string    `json:"icon_url"`
 	Params                string    `json:"params" gorm:"type:text"`
 	CreditCost      int       `json:"credit_cost" gorm:"default:1"`
+	IsFree          bool      `json:"is_free" gorm:"default:false"`
 	IsActive        bool      `json:"is_active" gorm:"default:true;index"`
 	IsFeatured      bool      `json:"is_featured" gorm:"default:false;index"`
 	IsPremium       bool      `json:"is_premium" gorm:"default:false"`
