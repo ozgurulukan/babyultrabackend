@@ -553,6 +553,12 @@
                         class="px-4 py-2 rounded-lg text-sm font-medium transition">
                         Video
                     </button>
+                    <button
+                        @click="setCategoryType('other')"
+                        :class="categoryTypeTab === 'other' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Other
+                    </button>
                 </div>
 
                 <!-- Category Form Modal -->
@@ -662,6 +668,12 @@
                         :class="templateTypeTab === 'video' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
                         class="px-4 py-2 rounded-lg text-sm font-medium transition">
                         Video
+                    </button>
+                    <button
+                        @click="setTemplateType('other')"
+                        :class="templateTypeTab === 'other' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Other
                     </button>
                 </div>
                 <p class="text-sm text-gray-500 mb-6">Manage the AI templates shown in the mobile app. Each template includes a prompt, demo media, and provider settings.</p>
@@ -977,6 +989,12 @@
                         :class="sliderTypeTab === 'video' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
                         class="px-4 py-2 rounded-lg text-sm font-medium transition">
                         Video
+                    </button>
+                    <button
+                        @click="setSliderType('other')"
+                        :class="sliderTypeTab === 'other' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Other
                     </button>
                 </div>
 
@@ -1398,6 +1416,12 @@
                         :class="pgTypeTab === 'video' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
                         class="px-4 py-2 rounded-lg text-sm font-medium transition">
                         Video
+                    </button>
+                    <button
+                        @click="pgTypeTab = 'other'; pg.templateId = 0; fetchTemplatesForPlayground('other')"
+                        :class="pgTypeTab === 'other' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200'"
+                        class="px-4 py-2 rounded-lg text-sm font-medium transition">
+                        Other
                     </button>
                 </div>
 

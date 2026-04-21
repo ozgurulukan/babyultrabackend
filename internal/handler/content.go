@@ -55,9 +55,10 @@ func (h *ContentHandler) GetCategories(c *fiber.Ctx) error {
 	// App-level category tabs should always start with: All, Popular, Trending
 	// These are virtual "categories" (id=0) and are always English.
 	virtual := []fiber.Map{
-		{"id": 0, "type": catType, "slug": "all", "name": "All", "description": "", "is_active": true, "sort_order": -3, "is_virtual": true, "filter": "all"},
-		{"id": 0, "type": catType, "slug": "popular", "name": "Popular", "description": "", "is_active": true, "sort_order": -2, "is_virtual": true, "filter": "popular"},
-		{"id": 0, "type": catType, "slug": "trending", "name": "Trending", "description": "", "is_active": true, "sort_order": -1, "is_virtual": true, "filter": "trending"},
+		{"id": 0, "type": catType, "slug": "all", "name": "All", "description": "", "is_active": true, "sort_order": -4, "is_virtual": true, "filter": "all"},
+		{"id": 0, "type": catType, "slug": "popular", "name": "Popular", "description": "", "is_active": true, "sort_order": -3, "is_virtual": true, "filter": "popular"},
+		{"id": 0, "type": catType, "slug": "trending", "name": "Trending", "description": "", "is_active": true, "sort_order": -2, "is_virtual": true, "filter": "trending"},
+		{"id": 0, "type": catType, "slug": "other", "name": "Other", "description": "", "is_active": true, "sort_order": -1, "is_virtual": true, "filter": "other"},
 	}
 	out := make([]interface{}, 0, len(virtual)+len(categories))
 	for _, v := range virtual {
