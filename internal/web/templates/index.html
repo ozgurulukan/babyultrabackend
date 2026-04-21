@@ -1043,7 +1043,7 @@
                                     <label class="block text-xs text-gray-400 mb-1">Template</label>
                                     <select x-model.number="quickButtonForm.template_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
                                         <option value="0">— Select —</option>
-                                        <template x-for="t in templates" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
+                                        <template x-for="t in sliderTemplates" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
                                     </select>
                                 </div>
                                 <div>
@@ -1105,7 +1105,7 @@
                                 <div><label class="block text-xs text-gray-400 mb-1">Linked template</label>
                                     <select x-model.number="sliderForm.template_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
                                         <option value="0">— Not linked —</option>
-                                        <template x-for="t in templates" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
+                                        <template x-for="t in sliderTemplates" :key="t.id"><option :value="t.id" x-text="t.name"></option></template>
                                     </select></div>
                             </div>
                             <div><label class="block text-xs text-gray-400 mb-1">Title</label>
@@ -1992,6 +1992,7 @@
             templateUploading: false,
             templateTypeTab: 'photo',
             sliderItems: [],
+            sliderTemplates: [],
             sliderForm: null,
             sliderUploading: false,
             sliderTypeTab: 'photo',
@@ -2151,6 +2152,7 @@
                 this.fetchTemplates();
                 this.fetchSlider();
                 this.fetchQuickButtons();
+                this.fetchSliderTemplates();
                 this.fetchOnboarding();
                 this.fetchUsers();
                 this.fetchReviews();
@@ -2319,7 +2321,13 @@
                     this.sliderItems = items;
                 } catch(e) { this.showToast('Failed to load slider', 'error'); }
             },
-            setSliderType(t) { this.sliderTypeTab = t; this.fetchSlider(); this.fetchQuickButtons(); },
+            async fetchSliderTemplates(type) {
+                try {
+                    const data = await this.api('/api/admin/templates?type=' + encodeURIComponent(type || this.sliderTypeTab || 'photo'));
+                    this.sliderTemplates = data.templates || [];
+                } catch(e) { this.sliderTemplates = []; }
+            },
+            setSliderType(t) { this.sliderTypeTab = t; this.fetchSlider(); this.fetchQuickButtons(); this.fetchSliderTemplates(t); },
             openNewSlider() { this.sliderForm = { app_id:'default', type: this.sliderTypeTab || 'photo', template_id:0, title:'', description:'', image_url:'', frame_url:'', deep_link:'', sort_order:0, is_active:true, starts_at:null, ends_at:null }; },
             editSlider(s) { this.sliderForm = { ...s, type: s.type || 'photo', starts_at: s.starts_at ? s.starts_at.substring(0,16) : null, ends_at: s.ends_at ? s.ends_at.substring(0,16) : null }; },
             async saveSlider() {
