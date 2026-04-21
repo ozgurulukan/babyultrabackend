@@ -734,7 +734,7 @@
                                     <option value="gemini">gemini</option>
                                 </select>
                             </div>
-                            <div>
+                            <div x-show="templateTypeTab !== 'other'">
                                 <label class="block text-xs text-gray-400 mb-1">Reference photos</label>
                                 <select x-model.number="templateForm.reference_image_count" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
                                     <option :value="1">1 photo</option>
@@ -749,7 +749,7 @@
                         </div>
 
                         <!-- Aspect Ratio -->
-                        <div class="mt-4">
+                        <div x-show="templateTypeTab !== 'other'" class="mt-4">
                             <label class="block text-xs text-gray-400 mb-1">Default Aspect Ratio</label>
                             <div class="flex flex-wrap gap-2 mt-1">
                                 <template x-for="r in ['1:1','4:5','9:16','16:9','3:4','4:3']" :key="r">
@@ -762,7 +762,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-3">
+                        <div x-show="templateTypeTab !== 'other'" class="mt-3">
                             <label class="block text-xs text-gray-400 mb-1">Supported Aspect Ratios</label>
                             <div class="flex flex-wrap gap-2 mt-1">
                                 <template x-for="r in ['1:1','4:5','9:16','16:9','3:4','4:3']" :key="'sup_'+r">
@@ -780,23 +780,23 @@
                             <p class="text-[10px] text-gray-500 mt-1">iOS'ta kullaniciya gosterilecek secenekler. En az 1 secili olmali.</p>
                         </div>
 
-                        <div class="mt-4">
+                        <div x-show="templateTypeTab !== 'other'" class="mt-4">
                             <label class="block text-xs text-gray-400 mb-1">Description</label>
                             <input x-model="templateForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Short user-facing description">
                         </div>
 
-                        <div class="mt-4">
+                        <div x-show="templateTypeTab !== 'other'" class="mt-4">
                             <label class="block text-xs text-gray-400 mb-1">Prompt *</label>
                             <textarea x-model="templateForm.prompt" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Remove dental braces from the person's teeth, make teeth look natural and clean..."></textarea>
                         </div>
 
-                        <div class="mt-4">
+                        <div x-show="templateTypeTab !== 'other'" class="mt-4">
                             <label class="block text-xs text-gray-400 mb-1">Negative Prompt</label>
                             <textarea x-model="templateForm.negative_prompt" rows="2" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="blurry, distorted..."></textarea>
                         </div>
 
-                        <p class="mt-5 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Before / After Demo <span class="normal-case font-normal text-gray-600">— optional</span></p>
-                        <div class="grid grid-cols-2 gap-4">
+                        <p x-show="templateTypeTab !== 'other'" class="mt-5 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Before / After Demo <span class="normal-case font-normal text-gray-600">— optional</span></p>
+                        <div x-show="templateTypeTab !== 'other'" class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1">Before (Orijinal) <span class="text-gray-600">optional</span></label>
                                 <div class="flex gap-2">
@@ -880,9 +880,9 @@
                             <p class="text-xs text-gray-500 mt-1">If enabled, this template won't appear in the app's "All" templates list, but can still be opened via Quick Buttons or direct linking.</p>
                         </div>
 
-                        <p class="mt-5 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Required Person Photos <span class="normal-case font-normal text-gray-600">— family face swap templates</span></p>
-                        <p class="text-xs text-gray-500 mb-3">Check which person photos the mobile app must require from the user before sending to the AI provider. The app will show separate upload fields for each checked role and validate that all required photos are provided.</p>
-                        <div class="grid grid-cols-3 gap-4">
+                        <p x-show="templateTypeTab !== 'other'" class="mt-5 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Required Person Photos <span class="normal-case font-normal text-gray-600">— family face swap templates</span></p>
+                        <p x-show="templateTypeTab !== 'other'" class="text-xs text-gray-500 mb-3">Check which person photos the mobile app must require from the user before sending to the AI provider. The app will show separate upload fields for each checked role and validate that all required photos are provided.</p>
+                        <div x-show="templateTypeTab !== 'other'" class="grid grid-cols-3 gap-4">
                             <div class="flex items-center">
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" x-model="templateForm.require_mom_photo" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600">
