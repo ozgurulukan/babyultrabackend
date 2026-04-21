@@ -790,6 +790,12 @@
                             <textarea x-model="templateForm.prompt" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Remove dental braces from the person's teeth, make teeth look natural and clean..."></textarea>
                         </div>
 
+                        <div x-show="templateTypeTab === 'other'" class="mt-4">
+                            <label class="block text-xs text-gray-400 mb-1">System Prompt</label>
+                            <textarea x-model="templateForm.prompt" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Sen bir çocuk bakım uzmanısın ve Bubsie adlı uygulamanın AI ajanısın..."></textarea>
+                            <p class="text-[10px] text-gray-500 mt-1">Kullanıcının mesajlarının önüne eklenecek sistem talimatı.</p>
+                        </div>
+
                         <div x-show="templateTypeTab !== 'other'" class="mt-4">
                             <label class="block text-xs text-gray-400 mb-1">Negative Prompt</label>
                             <textarea x-model="templateForm.negative_prompt" rows="2" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="blurry, distorted..."></textarea>

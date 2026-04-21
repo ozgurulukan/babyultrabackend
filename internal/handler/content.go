@@ -144,7 +144,8 @@ func (h *ContentHandler) GetSlider(c *fiber.Ctx) error {
 	now := time.Now()
 
 	var items []model.SliderItem
-	q := db.Where("is_active = ? AND app_id = ? AND (starts_at IS NULL OR starts_at <= ?) AND (ends_at IS NULL OR ends_at >= ?)",
+	// Match requested app_id OR fallback to "default" records for backward compatibility
+	q := db.Where("is_active = ? AND (app_id = ? OR app_id = 'default') AND (starts_at IS NULL OR starts_at <= ?) AND (ends_at IS NULL OR ends_at >= ?)",
 		true, appID, now, now).
 		Order("sort_order asc")
 	if sliderType != "" {
@@ -540,8 +541,8 @@ func (h *ContentHandler) AdminCreateTemplate(c *fiber.Ctx) error {
 		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body: "+err.Error())
 	}
 
-	if tmpl.Name == "" || tmpl.Prompt == "" {
-		return model.ErrorResponse(c, fiber.StatusBadRequest, "name and prompt are required")
+	if tmpl.Name == "" {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "name is required")
 	}
 	if tmpl.Slug == "" {
 		tmpl.Slug = slugify(tmpl.Name)

@@ -64,7 +64,7 @@ type Template struct {
 	Name            string    `json:"name" gorm:"not null"`
 	Description     string    `json:"description"`
 	ActionType      string    `json:"action_type" gorm:"index;default:image_generation"`
-	Prompt          string    `json:"prompt" gorm:"not null"`
+	Prompt          string    `json:"prompt" gorm:"type:text"`
 	NegativePrompt  string    `json:"negative_prompt"`
 	Provider        string    `json:"provider"`
 	Model           string    `json:"model"`
