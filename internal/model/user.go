@@ -74,6 +74,7 @@ type Template struct {
 	AfterMediaURL   string    `json:"after_media_url"`
 	AfterMediaType  string    `json:"after_media_type" gorm:"default:image"`
 	ReferenceImageCount int   `json:"reference_image_count" gorm:"default:1"`
+	ReferenceVideoURL   string `json:"reference_video_url"`
 	RequireMomPhoto  bool `json:"require_mom_photo" gorm:"default:false"`
 	RequireBabyPhoto bool `json:"require_baby_photo" gorm:"default:false"`
 	RequireDadPhoto  bool `json:"require_dad_photo" gorm:"default:false"`

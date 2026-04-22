@@ -41,6 +41,12 @@ func (h *PlaygroundHandler) TestTransform(c *fiber.Ctx) error {
 			return model.ErrorResponse(c, fiber.StatusBadRequest, "image_url must be a valid HTTP(S) URL")
 		}
 	}
+	if req.VideoURL != "" {
+		parsedURL, err := url.Parse(req.VideoURL)
+		if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+			return model.ErrorResponse(c, fiber.StatusBadRequest, "video_url must be a valid HTTP(S) URL")
+		}
+	}
 
 	p, err := h.registry.Get(req.Provider)
 	if err != nil {
@@ -52,6 +58,7 @@ func (h *PlaygroundHandler) TestTransform(c *fiber.Ctx) error {
 	input := &provider.TransformInput{
 		Model:           req.Model,
 		ImageURL:        req.ImageURL,
+		VideoURL:        req.VideoURL,
 		MomImageURL:     req.MomImageURL,
 		BabyImageURL:    req.BabyImageURL,
 		DadImageURL:     req.DadImageURL,

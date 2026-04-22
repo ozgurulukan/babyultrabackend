@@ -802,6 +802,17 @@
                             <textarea x-model="templateForm.negative_prompt" rows="2" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="blurry, distorted..."></textarea>
                         </div>
 
+                        <div x-show="templateTypeTab === 'video'" class="mt-4">
+                            <label class="block text-xs text-gray-400 mb-1">Reference Video <span class="text-gray-600">optional</span></label>
+                            <div class="flex gap-2">
+                                <input x-model="templateForm.reference_video_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="URL or upload">
+                                <button @click="uploadMediaFor('reference_video_url')" :disabled="templateUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                </button>
+                            </div>
+                            <video x-show="templateForm.reference_video_url" :src="templateForm.reference_video_url" class="mt-2 h-20 rounded-lg" muted playsinline></video>
+                        </div>
+
                         <p x-show="templateTypeTab !== 'other'" class="mt-5 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Before / After Demo <span class="normal-case font-normal text-gray-600">— optional</span></p>
                         <div x-show="templateTypeTab !== 'other'" class="grid grid-cols-2 gap-4">
                             <div>
@@ -974,6 +985,10 @@
                                             <span x-show="t.require_mom_photo" class="px-1.5 py-0.5 bg-pink-500/10 text-pink-400 rounded text-[10px] font-medium">Mom</span>
                                             <span x-show="t.require_baby_photo" class="px-1.5 py-0.5 bg-sky-500/10 text-sky-400 rounded text-[10px] font-medium">Baby</span>
                                             <span x-show="t.require_dad_photo" class="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[10px] font-medium">Dad</span>
+                                        </div>
+                                        <div x-show="t.reference_video_url" class="flex items-center gap-2 mt-1">
+                                            <span class="px-1.5 py-0.5 bg-orange-500/10 text-orange-400 rounded text-[10px] font-medium">REF VIDEO</span>
+                                            <a :href="t.reference_video_url" target="_blank" class="text-[10px] text-gray-500 hover:text-brand-400 truncate max-w-[200px]" x-text="t.reference_video_url"></a>
                                         </div>
                                     </div>
                                 </div>
@@ -1508,7 +1523,7 @@
 
                                 <!-- Input Media (visible for image/video/audio modes) -->
                                 <div x-show="pgModeNeedsInput()">
-                                    <label class="block text-xs text-gray-400 mb-1" x-text="pg.mode === 'audio_to_text' ? 'Audio file URL' : 'Input image/video URL'"></label>
+                                    <label class="block text-xs text-gray-400 mb-1" x-text="pg.mode === 'audio_to_text' ? 'Audio file URL' : (pg.mode === 'video_to_video' ? 'Reference image URL' : 'Input image/video URL')"></label>
                                     <div class="flex gap-2">
                                         <input x-model="pg.imageURL" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="URL or upload">
                                         <button @click="uploadPlaygroundMedia()" :disabled="pg.uploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
@@ -1526,6 +1541,18 @@
                                             </div>
                                         </div>
                                     </template>
+                                </div>
+
+                                <!-- Reference Video (visible for video_to_video mode) -->
+                                <div x-show="pg.mode === 'video_to_video'">
+                                    <label class="block text-xs text-gray-400 mb-1">Reference Video URL</label>
+                                    <div class="flex gap-2">
+                                        <input x-model="pg.videoURL" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="URL or upload">
+                                        <button @click="uploadPlaygroundMediaFor('videoURL')" :disabled="pg.uploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
+                                            <svg class="w-4 h-4" :class="pg.uploading && pg.uploadingField === 'videoURL' && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                                        </button>
+                                    </div>
+                                    <video x-show="pg.videoURL" :src="pg.videoURL" class="mt-2 h-24 rounded-lg" muted playsinline></video>
                                 </div>
 
                                 <!-- Family Photos (conditional based on template) -->
@@ -2059,6 +2086,7 @@
                 prompt: '',
                 negativePrompt: '',
                 imageURL: '',
+                videoURL: '',
                 momImageURL: '',
                 babyImageURL: '',
                 dadImageURL: '',
@@ -2450,7 +2478,7 @@
                 { value:'image_to_text', label:'Image to Text' },
             ],
             newTemplateForm() {
-                return { app_id:'default', slug:'', name:'', description:'', action_type:'image_generation', prompt:'', negative_prompt:'', provider:'fal.ai', model:'', category_id:0, before_media_url:'', before_media_type:'image', after_media_url:'', after_media_type:'image', reference_image_count: 1, hide_from_all: false, require_mom_photo: false, require_baby_photo: false, require_dad_photo: false, aspect_ratio:'1:1', supported_aspect_ratios:'1:1,4:5,9:16,16:9,3:4,4:3', icon_url:'', params:'', credit_cost:1, is_free:false, is_active:true, is_popular:false, is_viral:false, is_premium:false, sort_order:0 };
+                return { app_id:'default', slug:'', name:'', description:'', action_type:'image_generation', prompt:'', negative_prompt:'', provider:'fal.ai', model:'', category_id:0, before_media_url:'', before_media_type:'image', after_media_url:'', after_media_type:'image', reference_video_url:'', reference_image_count: 1, hide_from_all: false, require_mom_photo: false, require_baby_photo: false, require_dad_photo: false, aspect_ratio:'1:1', supported_aspect_ratios:'1:1,4:5,9:16,16:9,3:4,4:3', icon_url:'', params:'', credit_cost:1, is_free:false, is_active:true, is_popular:false, is_viral:false, is_premium:false, sort_order:0 };
             },
 
             applyDefaultPhotoPreset() {
@@ -2778,6 +2806,7 @@
                 this.pg.momImageURL = '';
                 this.pg.babyImageURL = '';
                 this.pg.dadImageURL = '';
+                this.pg.videoURL = t.reference_video_url || '';
                 if (t.before_media_url) this.pg.imageURL = t.before_media_url;
                 const typeMap = {
                     'image_generation': 'text_to_image',
@@ -2787,9 +2816,14 @@
                     'photo_restoration': 'image_to_image',
                     'text_to_speech': 'text_to_audio',
                     'speech_to_text': 'audio_to_text',
-                    'image_to_text': 'image_to_text'
+                    'image_to_text': 'image_to_text',
+                    'video_generation': 'image_to_video'
                 };
                 if (typeMap[t.action_type]) this.pg.mode = typeMap[t.action_type];
+                // If template has a reference video and uses a motion-control model, switch to video_to_video
+                if (t.reference_video_url && t.model && t.model.includes('motion-control')) {
+                    this.pg.mode = 'video_to_video';
+                }
             },
 
             async runPlayground() {
@@ -2812,19 +2846,21 @@
                 }
 
                 try {
+                    const body = {
+                        provider: this.pg.provider,
+                        model: this.pg.model,
+                        prompt: this.pg.prompt,
+                        image_url: this.pg.imageURL,
+                        video_url: this.pg.videoURL || undefined,
+                        mom_image_url: this.pg.momImageURL || undefined,
+                        baby_image_url: this.pg.babyImageURL || undefined,
+                        dad_image_url: this.pg.dadImageURL || undefined,
+                        action_type: this.pg.mode,
+                        params: params
+                    };
                     const data = await this.api('/api/admin/playground', {
                         method: 'POST',
-                        body: JSON.stringify({
-                            provider: this.pg.provider,
-                            model: this.pg.model,
-                            prompt: this.pg.prompt,
-                            image_url: this.pg.imageURL,
-                            mom_image_url: this.pg.momImageURL || undefined,
-                            baby_image_url: this.pg.babyImageURL || undefined,
-                            dad_image_url: this.pg.dadImageURL || undefined,
-                            action_type: this.pg.mode,
-                            params: params
-                        })
+                        body: JSON.stringify(body)
                     });
                     this.pg.result = data.result;
                     this.pg.resultDuration = data.duration_ms;
@@ -2855,6 +2891,7 @@
                 this.pg.prompt = '';
                 this.pg.negativePrompt = '';
                 this.pg.imageURL = '';
+                this.pg.videoURL = '';
                 this.pg.momImageURL = '';
                 this.pg.babyImageURL = '';
                 this.pg.dadImageURL = '';
@@ -2906,7 +2943,7 @@
             async uploadPlaygroundMediaFor(field) {
                 const input = document.createElement('input');
                 input.type = 'file';
-                input.accept = 'image/*';
+                input.accept = field === 'videoURL' ? 'video/*' : 'image/*';
                 input.onchange = async (e) => {
                     const file = e.target.files[0];
                     if (!file) return;

@@ -12,6 +12,7 @@ type TransformInput struct {
 	Model           string                 `json:"model"`
 	ImageURL        string                 `json:"image_url"`
 	ImageURLs       []string               `json:"image_urls,omitempty"`
+	VideoURL        string                 `json:"video_url,omitempty"`
 	MomImageURL     string                 `json:"mom_image_url,omitempty"`
 	BabyImageURL    string                 `json:"baby_image_url,omitempty"`
 	DadImageURL     string                 `json:"dad_image_url,omitempty"`

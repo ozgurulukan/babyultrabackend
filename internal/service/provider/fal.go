@@ -337,6 +337,20 @@ func buildFalPayload(model string, input *TransformInput) map[string]interface{}
 			}
 		}
 		payload["image_urls"] = imageURLs
+	case isKlingMotionControlModel(model):
+		if input.ImageURL != "" {
+			payload["image_url"] = input.ImageURL
+		}
+		if input.VideoURL != "" {
+			payload["video_url"] = input.VideoURL
+		}
+		if input.NegativePrompt != "" {
+			payload["negative_prompt"] = input.NegativePrompt
+		}
+		// character_orientation is required; default to "video" if not provided in params
+		if _, hasOrientation := input.Params["character_orientation"]; !hasOrientation {
+			payload["character_orientation"] = "video"
+		}
 	case isKlingV26Model(model):
 		if input.ImageURL != "" {
 			payload["start_image_url"] = input.ImageURL
@@ -459,7 +473,11 @@ func isKlingVideoModel(model string) bool {
 }
 
 func isKlingV26Model(model string) bool {
-	return strings.Contains(model, "kling-video/v2") || strings.Contains(model, "kling-video/v3")
+	return (strings.Contains(model, "kling-video/v2") || strings.Contains(model, "kling-video/v3")) && !strings.Contains(model, "motion-control")
+}
+
+func isKlingMotionControlModel(model string) bool {
+	return strings.Contains(model, "motion-control")
 }
 
 func isImageURLsModel(model string) bool {

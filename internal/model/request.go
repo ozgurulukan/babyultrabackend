@@ -5,6 +5,7 @@ type TransformRequest struct {
 	Model           string                 `json:"model,omitempty"`
 	ImageURL        string                 `json:"image_url" validate:"required"`
 	ImageURLs       []string               `json:"image_urls,omitempty"`
+	VideoURL        string                 `json:"video_url,omitempty"`
 	MomImageURL     string                 `json:"mom_image_url,omitempty"`
 	BabyImageURL    string                 `json:"baby_image_url,omitempty"`
 	DadImageURL     string                 `json:"dad_image_url,omitempty"`
@@ -34,6 +35,7 @@ type PlaygroundRequest struct {
 	Model           string                 `json:"model,omitempty"`
 	Prompt          string                 `json:"prompt"`
 	ImageURL        string                 `json:"image_url,omitempty"`
+	VideoURL        string                 `json:"video_url,omitempty"`
 	MomImageURL     string                 `json:"mom_image_url,omitempty"`
 	BabyImageURL    string                 `json:"baby_image_url,omitempty"`
 	DadImageURL     string                 `json:"dad_image_url,omitempty"`
