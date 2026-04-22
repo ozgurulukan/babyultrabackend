@@ -949,6 +949,7 @@
                                     </div>
                                     <div>
                                         <h3 class="font-semibold flex items-center gap-2 flex-wrap">
+                                            <span class="text-gray-500 text-xs font-normal mr-1" x-text="'#' + (t.sort_order ?? 0)"></span>
                                             <span x-text="t.name"></span>
                                             <span class="px-1.5 py-0.5 rounded text-[10px] font-medium" :class="t.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'" x-text="t.is_active ? 'ACTIVE' : 'INACTIVE'"></span>
                                             <span class="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded text-[10px] font-medium" x-text="(t.action_type||'image_generation').replace(/_/g,' ')"></span>
