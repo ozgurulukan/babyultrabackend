@@ -53,6 +53,8 @@ func (h *NotificationHandler) RegisterDeviceToken(c *fiber.Ctx) error {
 		appID = "default"
 	}
 
+	log.Printf("[DeviceToken] Registering token for uid=%s platform=%s app_id=%s", uid, platform, appID)
+
 	db := database.GetDB()
 
 	var existing model.DeviceToken
