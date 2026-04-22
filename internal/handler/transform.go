@@ -93,6 +93,8 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 		Params:          req.Params,
 	}
 
+	logID := createRequestLog(uid, req.Provider, req.Model, req.Prompt, req.ImageURL, "", "processing", 0)
+
 	result, err := p.Transform(c.Context(), input)
 	duration := time.Since(start).Milliseconds()
 
@@ -118,7 +120,9 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 		}
 	}
 
-	go logRequest(uid, req.Provider, req.Model, req.Prompt, req.ImageURL, resultURL, status, duration)
+	if logID > 0 {
+		updateRequestLog(logID, status, resultURL, duration)
+	}
 
 	if err != nil {
 		log.Printf("Transform error [provider=%s, uid=%s]: %v", req.Provider, uid, err)
@@ -128,10 +132,10 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 	return model.SuccessResponse(c, result)
 }
 
-func logRequest(uid, providerName, modelName, prompt, imageURL, resultURL, status string, durationMs int64) {
+func createRequestLog(uid, providerName, modelName, prompt, imageURL, resultURL, status string, durationMs int64) uint {
 	db := database.GetDB()
 	if db == nil {
-		return
+		return 0
 	}
 
 	var user model.User
@@ -140,7 +144,7 @@ func logRequest(uid, providerName, modelName, prompt, imageURL, resultURL, statu
 		userID = user.ID
 	}
 
-	db.Create(&model.RequestLog{
+	logEntry := &model.RequestLog{
 		UserID:      userID,
 		FirebaseUID: uid,
 		Provider:    providerName,
@@ -150,7 +154,26 @@ func logRequest(uid, providerName, modelName, prompt, imageURL, resultURL, statu
 		ResultURL:   resultURL,
 		Status:      status,
 		DurationMs:  durationMs,
-	})
+	}
+	if err := db.Create(logEntry).Error; err != nil {
+		log.Printf("Failed to create request log [uid=%s]: %v", uid, err)
+		return 0
+	}
+	return logEntry.ID
+}
+
+func updateRequestLog(id uint, status, resultURL string, durationMs int64) {
+	db := database.GetDB()
+	if db == nil {
+		return
+	}
+	if err := db.Model(&model.RequestLog{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"status":     status,
+		"result_url": resultURL,
+		"duration_ms": durationMs,
+	}).Error; err != nil {
+		log.Printf("Failed to update request log [id=%d]: %v", id, err)
+	}
 }
 
 func reserveTransformCredit(uid string, cost int) (bool, error) {
