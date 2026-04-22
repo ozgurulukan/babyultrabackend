@@ -26,6 +26,7 @@ func NewNotificationHandler(firebase *service.FirebaseService) *NotificationHand
 func (h *NotificationHandler) RegisterDeviceToken(c *fiber.Ctx) error {
 	uid, _ := c.Locals("uid").(string)
 	if uid == "" {
+		log.Printf("[DeviceToken] Unauthorized: no uid in context")
 		return model.ErrorResponse(c, fiber.StatusUnauthorized, "unauthorized")
 	}
 
