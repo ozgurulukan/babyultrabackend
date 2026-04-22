@@ -447,3 +447,25 @@ func (h *AdminHandler) UpdateUserCredits(c *fiber.Ctx) error {
 		"ban_reason": user.BanReason,
 	})
 }
+
+func (h *AdminHandler) DeleteUser(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid user ID")
+	}
+
+	db := database.GetDB()
+	var user model.User
+	if err := db.First(&user, id).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusNotFound, "user not found")
+	}
+
+	if err := db.Delete(&user).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to delete user")
+	}
+
+	return model.SuccessResponse(c, fiber.Map{
+		"id":    user.ID,
+		"email": user.Email,
+	})
+}

@@ -120,6 +120,7 @@ func Setup(
 	admin.Get("/logs", adminHandler.GetRequestLogs)
 	admin.Get("/users", adminHandler.ListUsers)
 	admin.Put("/users/:id", adminHandler.UpdateUserCredits)
+	admin.Delete("/users/:id", adminHandler.DeleteUser)
 
 	admin.Get("/categories", contentHandler.AdminListCategories)
 	admin.Post("/categories", contentHandler.AdminCreateCategory)
