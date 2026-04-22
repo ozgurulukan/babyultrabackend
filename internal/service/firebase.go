@@ -101,6 +101,10 @@ func (f *FirebaseService) SendMulticast(
 			APNS: &messaging.APNSConfig{
 				Payload: &messaging.APNSPayload{
 					Aps: &messaging.Aps{
+						Alert: &messaging.ApsAlert{
+							Title: title,
+							Body:  body,
+						},
 						Sound: "default",
 					},
 				},
