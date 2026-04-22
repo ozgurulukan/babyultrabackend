@@ -11,6 +11,7 @@ type TransformRequest struct {
 	Prompt          string                 `json:"prompt" validate:"required"`
 	NegativePrompt  string                 `json:"negative_prompt,omitempty"`
 	Params          map[string]interface{} `json:"params,omitempty"`
+	CreditCost      int                    `json:"credit_cost"`
 }
 
 type ProviderTestRequest struct {

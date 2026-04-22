@@ -66,7 +66,10 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 		return model.ErrorResponse(c, fiber.StatusUnauthorized, "unauthorized")
 	}
 
-	const transformCreditCost = 1
+	transformCreditCost := req.CreditCost
+	if transformCreditCost <= 0 {
+		transformCreditCost = 1
+	}
 	creditReserved, err := reserveTransformCredit(uid, transformCreditCost)
 	if err != nil {
 		if errors.Is(err, errInsufficientCredits) {
