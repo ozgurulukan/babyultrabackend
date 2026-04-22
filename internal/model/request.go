@@ -12,6 +12,7 @@ type TransformRequest struct {
 	NegativePrompt  string                 `json:"negative_prompt,omitempty"`
 	Params          map[string]interface{} `json:"params,omitempty"`
 	CreditCost      int                    `json:"credit_cost"`
+	NotifyWhenDone  bool                   `json:"notify_when_done"`
 }
 
 type ProviderTestRequest struct {

@@ -71,7 +71,7 @@ func Setup(
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitMax, cfg.RateLimitWindow)
 	adminRateLimiter := middleware.NewRateLimiter(120, 60)
 
-	transformHandler := handler.NewTransformHandler(registry, r2)
+	transformHandler := handler.NewTransformHandler(registry, r2, firebase)
 	userHandler := handler.NewUserHandler(cfg, registry, r2)
 	adminHandler := handler.NewAdminHandler(cfg, registry, firebase, revenuecat)
 	playgroundHandler := handler.NewPlaygroundHandler(registry, r2)

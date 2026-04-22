@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/ozgurulukan/bubsiebackend/internal/database"
 	"github.com/ozgurulukan/bubsiebackend/internal/model"
+	"github.com/ozgurulukan/bubsiebackend/internal/service"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/storage"
 	"gorm.io/gorm"
@@ -17,12 +19,13 @@ import (
 type TransformHandler struct {
 	registry *provider.Registry
 	storage  *storage.R2Storage
+	firebase *service.FirebaseService
 }
 
 var errInsufficientCredits = errors.New("insufficient credits")
 
-func NewTransformHandler(registry *provider.Registry, st *storage.R2Storage) *TransformHandler {
-	return &TransformHandler{registry: registry, storage: st}
+func NewTransformHandler(registry *provider.Registry, st *storage.R2Storage, firebase *service.FirebaseService) *TransformHandler {
+	return &TransformHandler{registry: registry, storage: st, firebase: firebase}
 }
 
 func (h *TransformHandler) Transform(c *fiber.Ctx) error {
@@ -129,6 +132,10 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 		return model.ErrorResponse(c, fiber.StatusBadGateway, "AI provider error — please try again")
 	}
 
+	if req.NotifyWhenDone {
+		go sendCompletionPush(h.firebase, uid, req.Prompt, resultURL)
+	}
+
 	return model.SuccessResponse(c, result)
 }
 
@@ -216,5 +223,46 @@ func refundTransformCredit(uid string, cost int) {
 		Where("firebase_uid = ? AND is_pro = ?", uid, false).
 		Update("credits", gorm.Expr("credits + ?", cost)).Error; err != nil {
 		log.Printf("Credit refund failed [uid=%s]: %v", uid, err)
+	}
+}
+
+func sendCompletionPush(fb *service.FirebaseService, uid, prompt, resultURL string) {
+	if fb == nil || !fb.IsMessagingReady() {
+		return
+	}
+	db := database.GetDB()
+	if db == nil {
+		return
+	}
+
+	var tokens []string
+	if err := db.Model(&model.DeviceToken{}).
+		Where("firebase_uid = ?", uid).
+		Distinct("token").
+		Pluck("token", &tokens).Error; err != nil {
+		log.Printf("Failed to fetch device tokens [uid=%s]: %v", uid, err)
+		return
+	}
+	if len(tokens) == 0 {
+		return
+	}
+
+	title := "Your result is ready"
+	body := "Your AI transformation has completed. Tap to view it."
+	if prompt != "" {
+		body = "Your transformation is ready. Tap to view it."
+	}
+
+	data := map[string]string{}
+	if resultURL != "" {
+		data["result_url"] = resultURL
+	}
+
+	_, _, invalid, err := fb.SendMulticast(context.Background(), tokens, title, body, data)
+	if err != nil {
+		log.Printf("Push notification failed [uid=%s]: %v", uid, err)
+	}
+	if len(invalid) > 0 {
+		db.Where("token IN ?", invalid).Delete(&model.DeviceToken{})
 	}
 }
