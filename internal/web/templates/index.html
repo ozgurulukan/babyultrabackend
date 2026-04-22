@@ -2453,6 +2453,7 @@
 
             applyDefaultPhotoPreset() {
                 if (!this.templateForm) return;
+                this.templateForm.app_id = 'bubsie';
                 this.templateForm.action_type = 'image_generation';
                 this.templateForm.provider = 'fal.ai';
                 this.templateForm.model = 'fal-ai/bytedance/seedream/v4/edit';
@@ -2463,6 +2464,7 @@
 
             applyDefaultVideoPreset() {
                 if (!this.templateForm) return;
+                this.templateForm.app_id = 'bubsie';
                 this.templateForm.action_type = 'video_generation';
                 this.templateForm.provider = 'fal.ai';
                 this.templateForm.model = 'fal-ai/kling-video/v2.6/pro/image-to-video';
