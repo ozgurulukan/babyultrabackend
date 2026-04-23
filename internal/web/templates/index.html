@@ -1265,7 +1265,10 @@
 
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
-                                <input type="hidden" x-model="onboardingForm.app_id">
+                                <div>
+                                    <label class="block text-xs text-gray-400 mb-1">App ID</label>
+                                    <input x-model="onboardingForm.app_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="default">
+                                </div>
                                 <div>
                                     <label class="block text-xs text-gray-400 mb-1">Tip</label>
                                     <select x-model="onboardingForm.type" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
@@ -1347,7 +1350,10 @@
                                 <h3 class="font-semibold text-sm" x-text="o.title || '(Untitled)'"></h3>
                                 <p class="text-xs text-gray-500 mt-1" x-text="o.description || ''"></p>
                                 <div class="flex items-center justify-between mt-3 text-xs text-gray-500">
-                                    <span x-text="'Order: ' + o.sort_order"></span>
+                                    <div class="flex flex-col gap-0.5">
+                                        <span x-text="'Order: ' + o.sort_order"></span>
+                                        <span x-text="'App ID: ' + (o.app_id || 'default')"></span>
+                                    </div>
                                     <div class="flex gap-2">
                                         <button @click="translateEntity('onboarding', o.id)" :disabled="translating['onboarding_'+o.id]" class="text-purple-400 hover:text-purple-300 text-xs">🌐</button>
                                         <button @click="editOnboarding(o)" class="text-brand-400 hover:text-brand-300">Edit</button>
