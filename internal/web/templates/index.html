@@ -37,6 +37,16 @@
         ::-webkit-scrollbar-track { background: #1e1b4b; }
         ::-webkit-scrollbar-thumb { background: #4338ca; border-radius: 3px; }
     </style>
+    <script>
+        // Global fallback for broken images
+        document.addEventListener('error', function(e) {
+            if (e.target.tagName === 'IMG') {
+                e.stopImmediatePropagation();
+                e.target.onerror = null;
+                e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjMWYyOTM3Ii8+PHBhdGggZD0iTTE0IDE0IEwyNiAyNiBNMjYgMTQgTDE0IDI2IiBzdHJva2U9IiNlZjQ0NDQiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+';
+            }
+        }, true);
+    </script>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen">
 
@@ -549,9 +559,15 @@
                         <p class="text-sm text-gray-500">
                             Total <span x-text="logsMeta.total"></span> records
                         </p>
-                        <div class="flex gap-2">
+                        <div class="flex items-center gap-2">
                             <button @click="logsMeta.page--; fetchLogs()" :disabled="logsMeta.page <= 1"
                                 class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Previous</button>
+                            <template x-for="p in logPages()" :key="p.key">
+                                <span x-show="p.n === '...'" class="px-2 text-sm text-gray-500">...</span>
+                                <button x-show="p.n !== '...'" @click="logsMeta.page = p.n; fetchLogs()"
+                                    :class="logsMeta.page === p.n ? 'bg-brand-600 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'"
+                                    class="px-3 py-1 rounded text-sm transition" x-text="p.n"></button>
+                            </template>
                             <button @click="logsMeta.page++; fetchLogs()" :disabled="logsMeta.page * logsMeta.limit >= logsMeta.total"
                                 class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Next</button>
                         </div>
@@ -2051,7 +2067,7 @@
             tab: 'dashboard',
             stats: null,
             logs: [],
-            logsMeta: { page: 1, limit: 50, total: 0 },
+            logsMeta: { page: 1, limit: 20, total: 0 },
             providerList: [],
             notes: [],
 
@@ -2283,6 +2299,24 @@
                 } catch (e) {
                     this.showToast('Failed to load logs', 'error');
                 }
+            },
+
+            logPages() {
+                const total = Math.ceil(this.logsMeta.total / this.logsMeta.limit);
+                const current = this.logsMeta.page;
+                const pages = [];
+                if (total <= 7) {
+                    for (let i = 1; i <= total; i++) pages.push({ n: i, key: 'p' + i });
+                } else {
+                    if (current > 3) pages.push({ n: 1, key: 'p1' });
+                    if (current > 4) pages.push({ n: '...', key: 'left-dots' });
+                    const start = Math.max(2, current - 2);
+                    const end = Math.min(total - 1, current + 2);
+                    for (let i = start; i <= end; i++) pages.push({ n: i, key: 'p' + i });
+                    if (current < total - 3) pages.push({ n: '...', key: 'right-dots' });
+                    if (current < total - 2) pages.push({ n: total, key: 'p' + total });
+                }
+                return pages;
             },
 
             async healthCheckAll() {
