@@ -249,6 +249,7 @@
                         <thead class="border-b border-gray-800 bg-gray-900/50">
                             <tr>
                                 <th class="text-left px-4 py-3 text-xs text-gray-400 font-medium">User</th>
+                                <th class="text-left px-4 py-3 text-xs text-gray-400 font-medium">UID</th>
                                 <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Credits</th>
                                 <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Status</th>
                                 <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Usage</th>
@@ -267,6 +268,9 @@
                                                 <p class="text-xs text-gray-500 truncate" x-text="u.email"></p>
                                             </div>
                                         </div>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <code class="text-xs text-gray-400" x-text="u.firebase_uid"></code>
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <span class="font-mono font-semibold" :class="u.credits > 0 ? 'text-green-400' : 'text-red-400'" x-text="u.credits"></span>
