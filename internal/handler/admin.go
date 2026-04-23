@@ -359,7 +359,7 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 
 	query := db.Model(&model.User{})
 	if search != "" {
-		query = query.Where("email LIKE ? OR name LIKE ?", "%"+search+"%", "%"+search+"%")
+		query = query.Where("email LIKE ? OR name LIKE ? OR firebase_uid LIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 	query.Count(&total)
 	query.Order("created_at desc").Offset(offset).Limit(limit).Find(&users)
