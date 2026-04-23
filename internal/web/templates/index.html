@@ -487,6 +487,8 @@
                             <thead class="bg-gray-800/50">
                                 <tr>
                                     <th class="text-left px-4 py-3 font-medium text-gray-400">Date</th>
+                                    <th class="text-left px-4 py-3 font-medium text-gray-400">UID</th>
+                                    <th class="text-left px-4 py-3 font-medium text-gray-400">Photos</th>
                                     <th class="text-left px-4 py-3 font-medium text-gray-400">Provider</th>
                                     <th class="text-left px-4 py-3 font-medium text-gray-400">Model</th>
                                     <th class="text-left px-4 py-3 font-medium text-gray-400">Prompt</th>
@@ -499,10 +501,34 @@
                                     <tr class="hover:bg-gray-800/30 transition">
                                         <td class="px-4 py-3 text-gray-300 whitespace-nowrap" x-text="formatDate(log.created_at)"></td>
                                         <td class="px-4 py-3">
+                                            <code class="text-xs text-gray-400" x-text="log.firebase_uid || '—'"></code>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <template x-if="log.image_url">
+                                                    <a :href="log.image_url" target="_blank" class="shrink-0">
+                                                        <img :src="log.image_url" class="w-10 h-10 rounded object-cover border border-gray-700 hover:border-brand-500 transition" title="Input">
+                                                    </a>
+                                                </template>
+                                                <template x-if="log.result_url">
+                                                    <a :href="log.result_url" target="_blank" class="shrink-0">
+                                                        <img :src="log.result_url" class="w-10 h-10 rounded object-cover border border-gray-700 hover:border-brand-500 transition" title="Result">
+                                                    </a>
+                                                </template>
+                                                <span x-show="!log.image_url && !log.result_url" class="text-xs text-gray-600">—</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3">
                                             <span class="px-2 py-0.5 bg-brand-500/10 text-brand-400 rounded text-xs font-medium" x-text="log.provider"></span>
                                         </td>
                                         <td class="px-4 py-3 text-gray-400 text-xs" x-text="log.model || '—'"></td>
-                                        <td class="px-4 py-3 text-gray-300 max-w-xs truncate" x-text="log.prompt"></td>
+                                        <td class="px-4 py-3">
+                                            <button @click="navigator.clipboard.writeText(log.prompt || ''); showToast('Prompt kopyalandı', 'success')" 
+                                                class="flex items-center gap-1.5 px-2 py-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded text-xs text-gray-300 transition" title="Promptu kopyala">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                                <span>Copy prompt</span>
+                                            </button>
+                                        </td>
                                         <td class="px-4 py-3">
                                             <span class="px-2 py-0.5 rounded text-xs font-medium"
                                                 :class="log.status === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'"
@@ -512,7 +538,7 @@
                                     </tr>
                                 </template>
                                 <tr x-show="!logs.length">
-                                    <td colspan="6" class="px-4 py-12 text-center text-gray-500">No logs yet</td>
+                                    <td colspan="8" class="px-4 py-12 text-center text-gray-500">No logs yet</td>
                                 </tr>
                             </tbody>
                         </table>
