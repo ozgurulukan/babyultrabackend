@@ -77,6 +77,7 @@ func Setup(
 	playgroundHandler := handler.NewPlaygroundHandler(registry, r2)
 	contentHandler := handler.NewContentHandler(r2, translator)
 	notificationHandler := handler.NewNotificationHandler(firebase)
+	chatHandler := handler.NewChatHandler(cfg)
 
 	api := app.Group("/api")
 
@@ -102,6 +103,7 @@ func Setup(
 	v1.Get("/languages", contentHandler.GetLanguages)
 	v1.Post("/device-token", notificationHandler.RegisterDeviceToken)
 	v1.Delete("/device-token", notificationHandler.DeleteDeviceToken)
+	v1.Post("/chat", chatHandler.Chat)
 
 	// Admin API
 	admin := api.Group("/admin")
