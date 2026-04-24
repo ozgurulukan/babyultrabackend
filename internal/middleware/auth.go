@@ -185,7 +185,7 @@ func LightweightFirebaseAuth(projectID string, adminEmail string) fiber.Handler 
 				"email":   email,
 				"name":    claims["name"],
 				"picture": claims["picture"],
-			}, "", 0)
+			}, "", "", 0)
 		}()
 
 		return c.Next()
