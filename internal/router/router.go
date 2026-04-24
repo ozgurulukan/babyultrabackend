@@ -78,6 +78,7 @@ func Setup(
 	contentHandler := handler.NewContentHandler(r2, translator)
 	notificationHandler := handler.NewNotificationHandler(firebase)
 	chatHandler := handler.NewChatHandler(cfg)
+	reportHandler := handler.NewReportHandler()
 
 	api := app.Group("/api")
 
@@ -105,6 +106,7 @@ func Setup(
 	v1.Post("/device-token", notificationHandler.RegisterDeviceToken)
 	v1.Delete("/device-token", notificationHandler.DeleteDeviceToken)
 	v1.Post("/chat", chatHandler.Chat)
+	v1.Post("/reports", reportHandler.CreateReport)
 
 	// Admin API
 	admin := api.Group("/admin")
@@ -170,6 +172,9 @@ func Setup(
 
 	admin.Get("/notifications/stats", notificationHandler.AdminTokenStats)
 	admin.Post("/notifications/send", notificationHandler.AdminSendNotification)
+
+	admin.Get("/reports", reportHandler.AdminListReports)
+	admin.Delete("/reports/:id", reportHandler.AdminDeleteReport)
 
 	admin.Get("/check", func(c *fiber.Ctx) error {
 		return model.SuccessResponse(c, fiber.Map{

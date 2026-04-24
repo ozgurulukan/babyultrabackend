@@ -1927,6 +1927,63 @@
                 </div>
             </div>
 
+            <div x-show="tab === 'reports'" class="fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">Content Reports</h1>
+                    <button @click="fetchReports()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Refresh
+                    </button>
+                </div>
+
+                <div x-show="reportsLoading" class="flex justify-center py-20">
+                    <div class="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+
+                <div x-show="!reportsLoading">
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-800 text-gray-400">
+                                <tr>
+                                    <th class="px-4 py-3 font-medium">ID</th>
+                                    <th class="px-4 py-3 font-medium">Reason</th>
+                                    <th class="px-4 py-3 font-medium">Details</th>
+                                    <th class="px-4 py-3 font-medium">Result URL</th>
+                                    <th class="px-4 py-3 font-medium">User</th>
+                                    <th class="px-4 py-3 font-medium">Date</th>
+                                    <th class="px-4 py-3 font-medium text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="r in reports" :key="r.id">
+                                    <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition">
+                                        <td class="px-4 py-3 text-gray-500" x-text="r.id"></td>
+                                        <td class="px-4 py-3">
+                                            <span class="px-2 py-1 bg-red-900/30 text-red-400 rounded-md text-xs font-medium" x-text="r.reason"></span>
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-300 max-w-xs truncate" x-text="r.details || '—'"></td>
+                                        <td class="px-4 py-3">
+                                            <a :href="r.result_url" target="_blank" class="text-brand-400 hover:text-brand-300 text-xs underline truncate max-w-[200px] inline-block" x-text="r.result_url"></a>
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-400 text-xs font-mono truncate max-w-[120px]" x-text="r.firebase_uid ? r.firebase_uid.substring(0,12)+'...' : 'Anonymous'"></td>
+                                        <td class="px-4 py-3 text-gray-400 text-xs" x-text="formatDate(r.created_at)"></td>
+                                        <td class="px-4 py-3 text-right">
+                                            <button @click="deleteReport(r.id)" class="px-3 py-1.5 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg text-xs font-medium transition">Delete</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr x-show="reports.length === 0">
+                                    <td colspan="7" class="px-4 py-12 text-center text-gray-500">
+                                        <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <p class="text-sm">No reports yet.</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div x-show="tab === 'settings'" class="fade-in">
                 <h1 class="text-2xl font-bold mb-6">Settings</h1>
 
@@ -2083,6 +2140,8 @@
             logsMeta: { page: 1, limit: 20, total: 0 },
             providerList: [],
             notes: [],
+            reports: [],
+            reportsLoading: false,
 
 
             providerChart: null,
@@ -2179,6 +2238,7 @@
                 { id: 'providers', label: 'Providers', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>' },
                 { id: 'logs', label: 'Logs', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>' },
                 { id: 'notifications', label: 'Push Notifications', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>' },
+                { id: 'reports', label: 'Reports', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-8a2 2 0 012-2h14a2 2 0 012 2v8M3 21h18M5 21v-8a2 2 0 012-2h14a2 2 0 012 2v8M9 10V7a3 3 0 013-3h0a3 3 0 013 3v3"/></svg>' },
                 { id: 'notes', label: 'Notes', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>' },
                 { id: 'settings', label: 'Settings', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' }
                 ],
@@ -2265,6 +2325,7 @@
                 this.fetchRevenueDetailed();
                 this.fetchNotificationStats();
                 this.fetchNotes();
+                this.fetchReports();
             },
 
             async fetchStats() {
@@ -3138,6 +3199,24 @@
                     this.notes = this.notes.filter(n => n.id !== id);
                     this.showToast('Note deleted');
                 } catch(e) { this.showToast('Failed to delete note', 'error'); }
+            },
+
+            async fetchReports() {
+                this.reportsLoading = true;
+                try {
+                    const data = await this.api('/api/admin/reports');
+                    this.reports = data.reports || [];
+                } catch(e) { this.showToast('Failed to load reports', 'error'); }
+                this.reportsLoading = false;
+            },
+
+            async deleteReport(id) {
+                if (!confirm('Delete this report?')) return;
+                try {
+                    await this.api('/api/admin/reports/' + id, { method: 'DELETE' });
+                    this.reports = this.reports.filter(r => r.id !== id);
+                    this.showToast('Report deleted');
+                } catch(e) { this.showToast('Failed to delete report', 'error'); }
             },
 
             resetNotificationForm() {

@@ -43,3 +43,9 @@ type PlaygroundRequest struct {
 	ActionType      string                 `json:"action_type,omitempty"`
 	Params          map[string]interface{} `json:"params,omitempty"`
 }
+
+type CreateReportRequest struct {
+	ResultURL string `json:"result_url" validate:"required"`
+	Reason    string `json:"reason" validate:"required"`
+	Details   string `json:"details,omitempty"`
+}
