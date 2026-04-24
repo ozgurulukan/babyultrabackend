@@ -37,20 +37,18 @@ func NewAdminHandler(
 func (h *AdminHandler) GetStats(c *fiber.Ctx) error {
 	db := database.GetDB()
 
-	// User count: try Firebase first, fallback to DB
+	// User count: always from DB (admin panel manages DB users)
 	var userTotal int64
+	db.Model(&model.User{}).Count(&userTotal)
+
 	firebaseStatus := "not_configured"
 	if h.firebase.IsReady() {
-		count, err := h.firebase.GetUserCount(c.Context())
+		_, err := h.firebase.GetUserCount(c.Context())
 		if err == nil {
-			userTotal = int64(count.Total)
 			firebaseStatus = "connected"
 		} else {
 			firebaseStatus = "error"
 		}
-	}
-	if userTotal == 0 {
-		db.Model(&model.User{}).Count(&userTotal)
 	}
 
 	revenue, err := h.revenuecat.GetOverview(c.Context())
