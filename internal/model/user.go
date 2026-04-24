@@ -3,18 +3,19 @@ package model
 import "time"
 
 type User struct {
-	ID          uint      `json:"id" gorm:"primaryKey"`
-	FirebaseUID string    `json:"firebase_uid" gorm:"uniqueIndex;not null"`
-	Email       string    `json:"email" gorm:"index"`
-	Name        string    `json:"name"`
-	PhotoURL    string    `json:"photo_url"`
-	Credits     int       `json:"credits" gorm:"default:5"`
-	IsPro       bool      `json:"is_pro" gorm:"default:false"`
-	IsBanned    bool      `json:"is_banned" gorm:"default:false;index"`
-	BanReason   string    `json:"ban_reason"`
-	LastLogin   time.Time `json:"last_login"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uint       `json:"id" gorm:"primaryKey"`
+	FirebaseUID string     `json:"firebase_uid" gorm:"uniqueIndex;not null"`
+	Email       string     `json:"email" gorm:"index"`
+	Name        string     `json:"name"`
+	PhotoURL    string     `json:"photo_url"`
+	Credits     int        `json:"credits" gorm:"default:5"`
+	IsPro       bool       `json:"is_pro" gorm:"default:false"`
+	IsBanned    bool       `json:"is_banned" gorm:"default:false;index"`
+	BanReason   string     `json:"ban_reason"`
+	DeletedAt   *time.Time `json:"deleted_at" gorm:"index"`
+	LastLogin   time.Time  `json:"last_login"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 type RequestLog struct {

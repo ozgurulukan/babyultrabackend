@@ -220,6 +220,40 @@ func (h *UserHandler) DeleteHistoryItem(c *fiber.Ctx) error {
 	return model.SuccessResponse(c, fiber.Map{"deleted": true})
 }
 
+// POST /api/v1/me/delete
+func (h *UserHandler) DeleteAccount(c *fiber.Ctx) error {
+	uid, _ := c.Locals("uid").(string)
+	if uid == "" {
+		return model.ErrorResponse(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	db := database.GetDB()
+
+	// Delete all user's generations / history
+	if err := db.Where("firebase_uid = ?", uid).Delete(&model.RequestLog{}).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to delete generations")
+	}
+
+	// Soft-delete user record: wipe credits, pro status, and mark deleted_at
+	now := time.Now()
+	if err := db.Model(&model.User{}).
+		Where("firebase_uid = ?", uid).
+		Updates(map[string]interface{}{
+			"credits":     0,
+			"is_pro":      false,
+			"deleted_at":  now,
+			"updated_at":  now,
+		}).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to delete account")
+	}
+
+	return model.SuccessResponse(c, fiber.Map{
+		"deleted":        true,
+		"deleted_at":     now.Format(time.RFC3339),
+		"generations":    0,
+	})
+}
+
 // POST /api/v1/upload
 func (h *UserHandler) UploadImage(c *fiber.Ctx) error {
 	file, err := c.FormFile("image")

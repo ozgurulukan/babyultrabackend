@@ -90,6 +90,7 @@ func Setup(
 	v1.Post("/upload", userHandler.UploadImage)
 	v1.Get("/me", userHandler.GetProfile)
 	v1.Post("/me/pro", userHandler.ActivatePro)
+	v1.Post("/me/delete", userHandler.DeleteAccount)
 	v1.Get("/providers", userHandler.GetProviders)
 	v1.Get("/history", userHandler.GetHistory)
 	v1.Delete("/history/:id", userHandler.DeleteHistoryItem)
