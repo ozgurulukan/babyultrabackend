@@ -260,6 +260,7 @@
                             <tr>
                                 <th class="text-left px-4 py-3 text-xs text-gray-400 font-medium">User</th>
                                 <th class="text-left px-4 py-3 text-xs text-gray-400 font-medium">UID</th>
+                                <th class="text-left px-4 py-3 text-xs text-gray-400 font-medium">Device ID</th>
                                 <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Credits</th>
                                 <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Status</th>
                                 <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Usage</th>
@@ -282,6 +283,9 @@
                                     <td class="px-4 py-3">
                                         <code class="text-xs text-gray-400" x-text="u.firebase_uid"></code>
                                     </td>
+                                    <td class="px-4 py-3">
+                                        <code class="text-xs text-gray-500" x-text="u.device_id || '—'"></code>
+                                    </td>
                                     <td class="px-4 py-3 text-center">
                                         <span class="font-mono font-semibold" :class="u.credits > 0 ? 'text-green-400' : 'text-red-400'" x-text="u.credits"></span>
                                     </td>
@@ -292,6 +296,7 @@
                                     <td class="px-4 py-3 text-center text-gray-400" x-text="u.total_usage"></td>
                                     <td class="px-4 py-3 text-center text-xs text-gray-500" x-text="formatDate(u.created_at)"></td>
                                     <td class="px-4 py-3 text-right space-x-1">
+                                        <button @click="banUserDevice(u)" x-show="u.device_id" class="px-2 py-1 rounded-lg text-xs font-medium transition bg-orange-600/20 hover:bg-orange-600/30 text-orange-400">Ban Device</button>
                                         <button @click="toggleBanUser(u)" class="px-2 py-1 rounded-lg text-xs font-medium transition" :class="u.is_banned ? 'bg-green-600/20 hover:bg-green-600/30 text-green-400' : 'bg-red-600/20 hover:bg-red-600/30 text-red-400'" x-text="u.is_banned ? 'Unban' : 'Ban'"></button>
                                         <button @click="deleteUser(u)" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium transition">Delete</button>
                                         <button @click="openEditUser(u)" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition">Edit</button>
@@ -385,6 +390,59 @@
                     <div class="flex gap-2">
                         <button @click="deletionMeta.page--; fetchDeletionRequests()" :disabled="deletionMeta.page <= 1" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Previous</button>
                         <button @click="deletionMeta.page++; fetchDeletionRequests()" :disabled="deletionMeta.page * deletionMeta.limit >= deletionMeta.total" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Banned Devices Tab -->
+            <div x-show="tab === 'banned-devices'" class="fade-in" x-init="$watch('tab', v => { if(v === 'banned-devices') { fetchBannedDevices(); } })">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-2xl font-bold">Banned Devices</h1>
+                    <button @click="fetchBannedDevices()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition">Refresh</button>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Devices banned by device ID. Banned devices cannot create new accounts or use the app, even if they reinstall or sign in anonymously.</p>
+
+                <div x-show="!bannedDevices.length" class="text-center text-gray-500 py-16 bg-gray-900 border border-gray-800 rounded-xl">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p>No banned devices</p>
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden" x-show="bannedDevices.length">
+                    <table class="w-full text-sm">
+                        <thead class="border-b border-gray-800 bg-gray-900/50">
+                            <tr>
+                                <th class="text-left px-4 py-3 text-xs text-gray-400 font-medium">ID</th>
+                                <th class="text-left px-4 py-3 text-xs text-gray-400 font-medium">Device ID</th>
+                                <th class="text-left px-4 py-3 text-xs text-gray-400 font-medium">Reason</th>
+                                <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Banned By</th>
+                                <th class="text-center px-4 py-3 text-xs text-gray-400 font-medium">Date</th>
+                                <th class="text-right px-4 py-3 text-xs text-gray-400 font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="b in bannedDevices" :key="b.id">
+                                <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition">
+                                    <td class="px-4 py-3 text-gray-400" x-text="'#' + b.id"></td>
+                                    <td class="px-4 py-3">
+                                        <code class="text-xs text-gray-400" x-text="b.device_id"></code>
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-300" x-text="b.reason || '—'"></td>
+                                    <td class="px-4 py-3 text-center text-xs text-gray-500" x-text="b.banned_by || '—'"></td>
+                                    <td class="px-4 py-3 text-center text-xs text-gray-500" x-text="formatDate(b.created_at)"></td>
+                                    <td class="px-4 py-3 text-right">
+                                        <button @click="unbanDevice(b.id)" class="px-2 py-1 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg text-xs font-medium transition">Unban</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex items-center justify-between mt-4" x-show="bannedDevicesMeta.total > 0">
+                    <p class="text-sm text-gray-500">Total <span x-text="bannedDevicesMeta.total"></span> devices</p>
+                    <div class="flex gap-2">
+                        <button @click="bannedDevicesMeta.page--; fetchBannedDevices()" :disabled="bannedDevicesMeta.page <= 1" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Previous</button>
+                        <button @click="bannedDevicesMeta.page++; fetchBannedDevices()" :disabled="bannedDevicesMeta.page * bannedDevicesMeta.limit >= bannedDevicesMeta.total" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Next</button>
                     </div>
                 </div>
             </div>
@@ -2252,6 +2310,8 @@
             editingUser: null,
             deletionRequests: [],
             deletionMeta: { page: 1, limit: 50, total: 0, status: 'pending' },
+            bannedDevices: [],
+            bannedDevicesMeta: { page: 1, limit: 50, total: 0 },
             revenueData: null,
             revenueChart: null,
             loading: { stats: false, health: false, revenue: false },
@@ -2315,6 +2375,7 @@
                 { id: 'reviews', label: 'Reviews', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>' },
                 { id: 'users', label: 'Users', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>' },
                 { id: 'deletion-requests', label: 'Deletion Requests', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' },
+                { id: 'banned-devices', label: 'Banned Devices', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>' },
                 { id: 'revenue', label: 'Revenue', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
                 { id: 'providers', label: 'Providers', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>' },
                 { id: 'logs', label: 'Logs', icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>' },
@@ -2408,6 +2469,7 @@
                 this.fetchNotes();
                 this.fetchReports();
                 this.fetchDeletionRequests();
+                this.fetchBannedDevices();
             },
 
             async fetchStats() {
@@ -3417,6 +3479,37 @@
                     this.showToast('Deletion rejected');
                     this.fetchDeletionRequests();
                 } catch(e) { this.showToast('Failed to reject: ' + e.message, 'error'); }
+            },
+
+            async fetchBannedDevices() {
+                try {
+                    const data = await this.api(`/api/admin/device-bans?page=${this.bannedDevicesMeta.page}&limit=${this.bannedDevicesMeta.limit}`);
+                    this.bannedDevices = data.bans || [];
+                    this.bannedDevicesMeta.total = data.total || 0;
+                } catch(e) { this.showToast('Failed to load banned devices', 'error'); }
+            },
+
+            async banUserDevice(u) {
+                if (!u.device_id) { this.showToast('No device ID for this user', 'error'); return; }
+                const reason = prompt('Ban reason (optional):');
+                if (reason === null) return;
+                try {
+                    await this.api('/api/admin/device-bans', {
+                        method: 'POST',
+                        body: JSON.stringify({ device_id: u.device_id, reason: reason })
+                    });
+                    this.showToast('Device banned');
+                    this.fetchBannedDevices();
+                } catch(e) { this.showToast('Failed to ban device: ' + e.message, 'error'); }
+            },
+
+            async unbanDevice(id) {
+                if (!confirm('Remove this device ban?')) return;
+                try {
+                    await this.api('/api/admin/device-bans/' + id, { method: 'DELETE' });
+                    this.showToast('Device unbanned');
+                    this.fetchBannedDevices();
+                } catch(e) { this.showToast('Failed to unban: ' + e.message, 'error'); }
             },
 
             formatDate(d) {

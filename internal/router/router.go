@@ -131,6 +131,10 @@ func Setup(
 	admin.Post("/deletion-requests/:id/approve", adminHandler.ApproveDeletionRequest)
 	admin.Post("/deletion-requests/:id/reject", adminHandler.RejectDeletionRequest)
 
+	admin.Get("/device-bans", adminHandler.ListBannedDevices)
+	admin.Post("/device-bans", adminHandler.BanDevice)
+	admin.Delete("/device-bans/:id", adminHandler.UnbanDevice)
+
 	admin.Get("/categories", contentHandler.AdminListCategories)
 	admin.Post("/categories", contentHandler.AdminCreateCategory)
 	admin.Put("/categories/:id", contentHandler.AdminUpdateCategory)

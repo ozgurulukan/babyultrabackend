@@ -616,3 +616,86 @@ func (h *AdminHandler) RejectDeletionRequest(c *fiber.Ctx) error {
 		"id":       req.ID,
 	})
 }
+
+// ─── Device Bans ───────────────────────────────────────────
+
+func (h *AdminHandler) ListBannedDevices(c *fiber.Ctx) error {
+	db := database.GetDB()
+
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 50)
+	if limit > 100 {
+		limit = 100
+	}
+	offset := (page - 1) * limit
+
+	var total int64
+	db.Model(&model.DeviceBan{}).Count(&total)
+
+	var bans []model.DeviceBan
+	db.Order("created_at desc").Offset(offset).Limit(limit).Find(&bans)
+
+	return model.SuccessResponse(c, fiber.Map{
+		"bans":  bans,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	})
+}
+
+func (h *AdminHandler) BanDevice(c *fiber.Ctx) error {
+	var req struct {
+		DeviceID string `json:"device_id"`
+		Reason   string `json:"reason"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body")
+	}
+	if req.DeviceID == "" {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "device_id is required")
+	}
+
+	adminEmail, _ := c.Locals("email").(string)
+	db := database.GetDB()
+
+	var existing model.DeviceBan
+	res := db.Where("device_id = ?", req.DeviceID).First(&existing)
+	if res.Error == nil {
+		return model.ErrorResponse(c, fiber.StatusConflict, "device already banned")
+	}
+
+	if err := db.Create(&model.DeviceBan{
+		DeviceID: req.DeviceID,
+		Reason:   req.Reason,
+		BannedBy: adminEmail,
+	}).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to ban device")
+	}
+
+	return model.SuccessResponse(c, fiber.Map{
+		"banned":    true,
+		"device_id": req.DeviceID,
+	})
+}
+
+func (h *AdminHandler) UnbanDevice(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid ban ID")
+	}
+
+	db := database.GetDB()
+	var ban model.DeviceBan
+	if err := db.First(&ban, id).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusNotFound, "ban not found")
+	}
+
+	if err := db.Delete(&ban).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to unban device")
+	}
+
+	return model.SuccessResponse(c, fiber.Map{
+		"unbanned":  true,
+		"device_id": ban.DeviceID,
+	})
+}

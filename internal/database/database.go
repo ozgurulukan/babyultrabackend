@@ -40,6 +40,7 @@ func Connect() {
 		&model.InstallCreditClaim{},
 		&model.Note{},
 		&model.DeletionRequest{},
+		&model.DeviceBan{},
 	); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}

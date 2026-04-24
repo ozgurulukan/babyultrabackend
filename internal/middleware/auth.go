@@ -49,12 +49,17 @@ func FirebaseAuth(firebase *service.FirebaseService, initialCredits int) fiber.H
 		c.Locals("email", token.Claims["email"])
 		c.Locals("token", token)
 
+		deviceID := strings.TrimSpace(c.Get("X-Device-ID"))
+		if deviceID != "" && isDeviceBanned(deviceID) {
+			return model.ErrorResponse(c, fiber.StatusForbidden, "this device has been restricted from using our services")
+		}
+
 		if isUserBanned(token.UID) {
 			return model.ErrorResponse(c, fiber.StatusForbidden, "your account has been suspended")
 		}
 
 		installSeed := strings.TrimSpace(c.Get("X-Install-Seed"))
-		if err := upsertUser(token.UID, token.Claims, installSeed, initialCredits); err != nil {
+		if err := upsertUser(token.UID, token.Claims, installSeed, deviceID, initialCredits); err != nil {
 			if errors.Is(err, errInstallSeedRequired) {
 				return model.ErrorResponse(c, fiber.StatusBadRequest, "missing X-Install-Seed header")
 			}
@@ -202,7 +207,22 @@ func isUserBanned(uid string) bool {
 	return user.IsBanned
 }
 
-func upsertUser(uid string, claims map[string]interface{}, installSeed string, initialCredits int) error {
+func isDeviceBanned(deviceID string) bool {
+	if deviceID == "" {
+		return false
+	}
+	db := database.GetDB()
+	if db == nil {
+		return false
+	}
+	var ban model.DeviceBan
+	if err := db.Where("device_id = ?", deviceID).First(&ban).Error; err != nil {
+		return false
+	}
+	return true
+}
+
+func upsertUser(uid string, claims map[string]interface{}, installSeed string, deviceID string, initialCredits int) error {
 	db := database.GetDB()
 	if db == nil || uid == "" {
 		return nil
@@ -212,15 +232,20 @@ func upsertUser(uid string, claims map[string]interface{}, installSeed string, i
 	name, _ := claims["name"].(string)
 	picture, _ := claims["picture"].(string)
 
+	updates := map[string]interface{}{
+		"email":      email,
+		"name":       name,
+		"photo_url":  picture,
+		"last_login": time.Now(),
+	}
+	if deviceID != "" {
+		updates["device_id"] = deviceID
+	}
+
 	var user model.User
 	result := db.Where("firebase_uid = ?", uid).First(&user)
 	if result.Error == nil {
-		return db.Model(&user).Updates(map[string]interface{}{
-			"email":      email,
-			"name":       name,
-			"photo_url":  picture,
-			"last_login": time.Now(),
-		}).Error
+		return db.Model(&user).Updates(updates).Error
 	}
 
 	if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -246,6 +271,7 @@ func upsertUser(uid string, claims map[string]interface{}, installSeed string, i
 		Email:       email,
 		Name:        name,
 		PhotoURL:    picture,
+		DeviceID:    deviceID,
 		Credits:     credits,
 		LastLogin:   time.Now(),
 	}).Error
@@ -258,12 +284,7 @@ func upsertUser(uid string, claims map[string]interface{}, installSeed string, i
 		return createErr
 	}
 
-	return db.Model(&existing).Updates(map[string]interface{}{
-		"email":      email,
-		"name":       name,
-		"photo_url":  picture,
-		"last_login": time.Now(),
-	}).Error
+	return db.Model(&existing).Updates(updates).Error
 }
 
 func claimInitialCredits(db *gorm.DB, uid, installSeed string, initialCredits int) (int, error) {

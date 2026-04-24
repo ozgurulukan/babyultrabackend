@@ -8,6 +8,7 @@ type User struct {
 	Email              string     `json:"email" gorm:"index"`
 	Name               string     `json:"name"`
 	PhotoURL           string     `json:"photo_url"`
+	DeviceID           string     `json:"device_id" gorm:"index"`
 	Credits            int        `json:"credits" gorm:"default:5"`
 	IsPro              bool       `json:"is_pro" gorm:"default:false"`
 	IsBanned           bool       `json:"is_banned" gorm:"default:false;index"`
@@ -197,4 +198,13 @@ type Translation struct {
 	Value      string    `json:"value" gorm:"type:text;not null"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type DeviceBan struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	DeviceID  string    `json:"device_id" gorm:"uniqueIndex;not null"`
+	Reason    string    `json:"reason"`
+	BannedBy  string    `json:"banned_by"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
