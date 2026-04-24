@@ -469,3 +469,152 @@ func (h *AdminHandler) DeleteUser(c *fiber.Ctx) error {
 		"email": user.Email,
 	})
 }
+
+// ─── Deletion Requests ─────────────────────────────────────
+
+func (h *AdminHandler) ListDeletionRequests(c *fiber.Ctx) error {
+	db := database.GetDB()
+
+	status := c.Query("status", "pending")
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 50)
+	if limit > 100 {
+		limit = 100
+	}
+	offset := (page - 1) * limit
+
+	var total int64
+	query := db.Model(&model.DeletionRequest{})
+	if status != "all" {
+		query = query.Where("status = ?", status)
+	}
+	query.Count(&total)
+
+	var requests []model.DeletionRequest
+	db.Where("status = ? OR ? = 'all'", status, status).
+		Order("requested_at desc").
+		Offset(offset).
+		Limit(limit).
+		Find(&requests)
+
+	type row struct {
+		ID          uint   `json:"id"`
+		FirebaseUID string `json:"firebase_uid"`
+		Status      string `json:"status"`
+		RequestedAt string `json:"requested_at"`
+		ProcessedAt string `json:"processed_at"`
+		ProcessedBy string `json:"processed_by"`
+		UserEmail   string `json:"user_email"`
+		UserName    string `json:"user_name"`
+		UserCredits int    `json:"user_credits"`
+		UserCreated string `json:"user_created"`
+	}
+
+	rows := make([]row, 0, len(requests))
+	for _, r := range requests {
+		var u model.User
+		db.Select("email, name, credits, created_at").Where("firebase_uid = ?", r.FirebaseUID).First(&u)
+		processedAt := ""
+		if r.ProcessedAt != nil {
+			processedAt = r.ProcessedAt.Format(time.RFC3339)
+		}
+		rows = append(rows, row{
+			ID:          r.ID,
+			FirebaseUID: r.FirebaseUID,
+			Status:      r.Status,
+			RequestedAt: r.RequestedAt.Format(time.RFC3339),
+			ProcessedAt: processedAt,
+			ProcessedBy: r.ProcessedBy,
+			UserEmail:   u.Email,
+			UserName:    u.Name,
+			UserCredits: u.Credits,
+			UserCreated: u.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	return model.SuccessResponse(c, fiber.Map{
+		"requests": rows,
+		"total":    total,
+		"page":     page,
+		"limit":    limit,
+	})
+}
+
+func (h *AdminHandler) ApproveDeletionRequest(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request ID")
+	}
+
+	db := database.GetDB()
+	var req model.DeletionRequest
+	if err := db.First(&req, id).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusNotFound, "request not found")
+	}
+	if req.Status != "pending" {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "request already processed")
+	}
+
+	adminEmail, _ := c.Locals("email").(string)
+	now := time.Now()
+
+	// Delete all user's generations / history
+	db.Where("firebase_uid = ?", req.FirebaseUID).Delete(&model.RequestLog{})
+
+	// Soft-delete user record
+	db.Model(&model.User{}).
+		Where("firebase_uid = ?", req.FirebaseUID).
+		Updates(map[string]interface{}{
+			"credits":                0,
+			"is_pro":                 false,
+			"deleted_at":             now,
+			"deletion_requested_at":  nil,
+			"updated_at":             now,
+		})
+
+	// Mark request as approved
+	req.Status = "approved"
+	req.ProcessedAt = &now
+	req.ProcessedBy = adminEmail
+	db.Save(&req)
+
+	return model.SuccessResponse(c, fiber.Map{
+		"approved": true,
+		"id":       req.ID,
+	})
+}
+
+func (h *AdminHandler) RejectDeletionRequest(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request ID")
+	}
+
+	db := database.GetDB()
+	var req model.DeletionRequest
+	if err := db.First(&req, id).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusNotFound, "request not found")
+	}
+	if req.Status != "pending" {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "request already processed")
+	}
+
+	adminEmail, _ := c.Locals("email").(string)
+	now := time.Now()
+
+	// Clear deletion_requested_at from user
+	db.Model(&model.User{}).
+		Where("firebase_uid = ?", req.FirebaseUID).
+		Update("deletion_requested_at", nil)
+
+	// Mark request as rejected
+	req.Status = "rejected"
+	req.ProcessedAt = &now
+	req.ProcessedBy = adminEmail
+	db.Save(&req)
+
+	return model.SuccessResponse(c, fiber.Map{
+		"rejected": true,
+		"id":       req.ID,
+	})
+}

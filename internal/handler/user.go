@@ -229,28 +229,39 @@ func (h *UserHandler) DeleteAccount(c *fiber.Ctx) error {
 
 	db := database.GetDB()
 
-	// Delete all user's generations / history
-	if err := db.Where("firebase_uid = ?", uid).Delete(&model.RequestLog{}).Error; err != nil {
-		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to delete generations")
+	// Check if a pending request already exists
+	var existing model.DeletionRequest
+	res := db.Where("firebase_uid = ? AND status = ?", uid, "pending").First(&existing)
+	if res.Error == nil {
+		return model.SuccessResponse(c, fiber.Map{
+			"requested":      true,
+			"requested_at":   existing.RequestedAt.Format(time.RFC3339),
+			"message":        "Deletion request already pending",
+		})
 	}
 
-	// Soft-delete user record: wipe credits, pro status, and mark deleted_at
 	now := time.Now()
+
+	// Mark user as deletion requested
 	if err := db.Model(&model.User{}).
 		Where("firebase_uid = ?", uid).
-		Updates(map[string]interface{}{
-			"credits":     0,
-			"is_pro":      false,
-			"deleted_at":  now,
-			"updated_at":  now,
-		}).Error; err != nil {
-		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to delete account")
+		Update("deletion_requested_at", now).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to request deletion")
+	}
+
+	// Create deletion request record for admin review
+	if err := db.Create(&model.DeletionRequest{
+		FirebaseUID: uid,
+		Status:      "pending",
+		RequestedAt: now,
+	}).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to create deletion request")
 	}
 
 	return model.SuccessResponse(c, fiber.Map{
-		"deleted":        true,
-		"deleted_at":     now.Format(time.RFC3339),
-		"generations":    0,
+		"requested":    true,
+		"requested_at": now.Format(time.RFC3339),
+		"message":      "Your deletion request has been submitted for review. You can continue using the app.",
 	})
 }
 

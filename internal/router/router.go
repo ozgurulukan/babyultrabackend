@@ -127,6 +127,10 @@ func Setup(
 	admin.Put("/users/:id", adminHandler.UpdateUserCredits)
 	admin.Delete("/users/:id", adminHandler.DeleteUser)
 
+	admin.Get("/deletion-requests", adminHandler.ListDeletionRequests)
+	admin.Post("/deletion-requests/:id/approve", adminHandler.ApproveDeletionRequest)
+	admin.Post("/deletion-requests/:id/reject", adminHandler.RejectDeletionRequest)
+
 	admin.Get("/categories", contentHandler.AdminListCategories)
 	admin.Post("/categories", contentHandler.AdminCreateCategory)
 	admin.Put("/categories/:id", contentHandler.AdminUpdateCategory)

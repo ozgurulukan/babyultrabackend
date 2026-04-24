@@ -193,8 +193,11 @@ func isUserBanned(uid string) bool {
 		return false
 	}
 	var user model.User
-	if err := db.Select("is_banned").Where("firebase_uid = ?", uid).First(&user).Error; err != nil {
+	if err := db.Select("is_banned", "deleted_at").Where("firebase_uid = ?", uid).First(&user).Error; err != nil {
 		return false
+	}
+	if user.DeletedAt != nil {
+		return true
 	}
 	return user.IsBanned
 }

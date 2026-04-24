@@ -3,17 +3,29 @@ package model
 import "time"
 
 type User struct {
+	ID                 uint       `json:"id" gorm:"primaryKey"`
+	FirebaseUID        string     `json:"firebase_uid" gorm:"uniqueIndex;not null"`
+	Email              string     `json:"email" gorm:"index"`
+	Name               string     `json:"name"`
+	PhotoURL           string     `json:"photo_url"`
+	Credits            int        `json:"credits" gorm:"default:5"`
+	IsPro              bool       `json:"is_pro" gorm:"default:false"`
+	IsBanned           bool       `json:"is_banned" gorm:"default:false;index"`
+	BanReason          string     `json:"ban_reason"`
+	DeletedAt          *time.Time `json:"deleted_at" gorm:"index"`
+	DeletionRequestedAt *time.Time `json:"deletion_requested_at" gorm:"index"`
+	LastLogin          time.Time  `json:"last_login"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+}
+
+type DeletionRequest struct {
 	ID          uint       `json:"id" gorm:"primaryKey"`
-	FirebaseUID string     `json:"firebase_uid" gorm:"uniqueIndex;not null"`
-	Email       string     `json:"email" gorm:"index"`
-	Name        string     `json:"name"`
-	PhotoURL    string     `json:"photo_url"`
-	Credits     int        `json:"credits" gorm:"default:5"`
-	IsPro       bool       `json:"is_pro" gorm:"default:false"`
-	IsBanned    bool       `json:"is_banned" gorm:"default:false;index"`
-	BanReason   string     `json:"ban_reason"`
-	DeletedAt   *time.Time `json:"deleted_at" gorm:"index"`
-	LastLogin   time.Time  `json:"last_login"`
+	FirebaseUID string     `json:"firebase_uid" gorm:"index;not null"`
+	Status      string     `json:"status" gorm:"default:pending"` // pending, approved, rejected
+	RequestedAt time.Time  `json:"requested_at"`
+	ProcessedAt *time.Time `json:"processed_at"`
+	ProcessedBy string     `json:"processed_by"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
