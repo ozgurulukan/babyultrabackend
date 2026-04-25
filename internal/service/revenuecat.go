@@ -146,7 +146,7 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 				IsActive bool `json:"is_active"`
 			} `json:"entitlements"`
 			NonSubscriptions map[string][]struct {
-				ProductID string `json:"id"`
+				ProductID string `json:"product_id"`
 			} `json:"non_subscriptions"`
 		} `json:"subscriber"`
 	}

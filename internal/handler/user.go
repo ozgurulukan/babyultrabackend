@@ -59,29 +59,10 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
 	}
 
-	// Add credits for non-subscription transactions
-	totalCredits := 0
-	for _, tx := range info.NonSubscriptionTransactions {
-		switch tx.ProductID {
-		case "com.fagore.bubsie.100credits":
-			totalCredits += 100
-		case "com.fagore.bubsie.250credits":
-			totalCredits += 250
-		case "com.fagore.bubsie.1000credits":
-			totalCredits += 1000
-		}
-	}
-	if totalCredits > 0 {
-		if err := db.Model(&model.User{}).
-			Where("firebase_uid = ?", uid).
-			Update("credits", gorm.Expr("credits + ?", totalCredits)).Error; err != nil {
-			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add credits")
-		}
-	}
-
+	// NOTE: Credits are added via RevenueCat webhooks (NON_RENEWING_PURCHASE / INITIAL_PURCHASE)
+	// to avoid double-counting on repeated sync-purchases calls.
 	return model.SuccessResponse(c, fiber.Map{
-		"is_pro":  isPro,
-		"credits": totalCredits,
+		"is_pro": isPro,
 	})
 }
 

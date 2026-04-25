@@ -62,13 +62,16 @@ func (h *WebhookHandler) RevenueCatWebhook(c *fiber.Ctx) error {
 		}
 	}
 
-	// Add credits for consumable / one-time purchases
-	creditsToAdd := creditsForProduct(payload.Event.ProductID)
-	if creditsToAdd > 0 {
-		if err := db.Model(&model.User{}).
-			Where("firebase_uid = ?", uid).
-			Update("credits", gorm.Expr("credits + ?", creditsToAdd)).Error; err != nil {
-			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add credits")
+	// Add credits only for one-time (non-renewing) purchase events
+	switch payload.Event.Type {
+	case "INITIAL_PURCHASE", "NON_RENEWING_PURCHASE":
+		creditsToAdd := creditsForProduct(payload.Event.ProductID)
+		if creditsToAdd > 0 {
+			if err := db.Model(&model.User{}).
+				Where("firebase_uid = ?", uid).
+				Update("credits", gorm.Expr("credits + ?", creditsToAdd)).Error; err != nil {
+				return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add credits")
+			}
 		}
 	}
 
