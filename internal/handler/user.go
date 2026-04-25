@@ -19,6 +19,7 @@ import (
 	"github.com/ozgurulukan/bubsiebackend/internal/service"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/storage"
+	"gorm.io/gorm"
 )
 
 type UserHandler struct {
@@ -58,8 +59,24 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
 	}
 
-	// NOTE: Credits are added via RevenueCat webhooks (NON_RENEWING_PURCHASE / INITIAL_PURCHASE)
-	// to avoid double-counting on repeated sync-purchases calls.
+	// Grant initial 50 weekly credits when user becomes (or is) Pro and hasn't received them this week.
+	// This acts as a fallback if the webhook is missed.
+	if isPro {
+		now := time.Now().UTC()
+		weekStart := now.AddDate(0, 0, -int(now.Weekday()-time.Monday))
+		weekStart = time.Date(weekStart.Year(), weekStart.Month(), weekStart.Day(), 0, 0, 0, 0, time.UTC)
+
+		if err := db.Model(&model.User{}).
+			Where("firebase_uid = ? AND (last_weekly_credit_at IS NULL OR last_weekly_credit_at < ?)", uid, weekStart).
+			Updates(map[string]interface{}{
+				"credits":               gorm.Expr("credits + ?", 50),
+				"last_weekly_credit_at": now,
+				"updated_at":            now,
+			}).Error; err != nil {
+			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add weekly credits")
+		}
+	}
+
 	return model.SuccessResponse(c, fiber.Map{
 		"is_pro": isPro,
 	})

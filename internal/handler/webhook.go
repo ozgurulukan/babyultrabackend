@@ -65,12 +65,30 @@ func (h *WebhookHandler) RevenueCatWebhook(c *fiber.Ctx) error {
 	// Add credits only for one-time (non-renewing) purchase events
 	switch payload.Event.Type {
 	case "INITIAL_PURCHASE", "NON_RENEWING_PURCHASE":
+		// One-time credit packs
 		creditsToAdd := creditsForProduct(payload.Event.ProductID)
 		if creditsToAdd > 0 {
 			if err := db.Model(&model.User{}).
 				Where("firebase_uid = ?", uid).
 				Update("credits", gorm.Expr("credits + ?", creditsToAdd)).Error; err != nil {
 				return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add credits")
+			}
+		}
+
+		// Subscription initial grant: 50 weekly credits on first purchase
+		if isSubscriptionProduct(payload.Event.ProductID) {
+			now := time.Now().UTC()
+			weekStart := now.AddDate(0, 0, -int(now.Weekday()-time.Monday))
+			weekStart = time.Date(weekStart.Year(), weekStart.Month(), weekStart.Day(), 0, 0, 0, 0, time.UTC)
+
+			if err := db.Model(&model.User{}).
+				Where("firebase_uid = ? AND (last_weekly_credit_at IS NULL OR last_weekly_credit_at < ?)", uid, weekStart).
+				Updates(map[string]interface{}{
+					"credits":               gorm.Expr("credits + ?", 50),
+					"last_weekly_credit_at": now,
+					"updated_at":            now,
+				}).Error; err != nil {
+				return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add weekly credits")
 			}
 		}
 	}
@@ -88,5 +106,14 @@ func creditsForProduct(productID string) int {
 		return 1000
 	default:
 		return 0
+	}
+}
+
+func isSubscriptionProduct(productID string) bool {
+	switch productID {
+	case "com.fagore.bubsie.weeklypro7", "com.fagore.bubsie.yearlypro7":
+		return true
+	default:
+		return false
 	}
 }
