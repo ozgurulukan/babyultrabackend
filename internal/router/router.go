@@ -72,7 +72,7 @@ func Setup(
 	adminRateLimiter := middleware.NewRateLimiter(120, 60)
 
 	transformHandler := handler.NewTransformHandler(registry, r2, firebase)
-	userHandler := handler.NewUserHandler(cfg, registry, r2)
+	userHandler := handler.NewUserHandler(cfg, registry, r2, revenuecat)
 	adminHandler := handler.NewAdminHandler(cfg, registry, firebase, revenuecat)
 	playgroundHandler := handler.NewPlaygroundHandler(registry, r2)
 	contentHandler := handler.NewContentHandler(r2, translator)
@@ -96,6 +96,7 @@ func Setup(
 	v1.Post("/upload", userHandler.UploadImage)
 	v1.Get("/me", userHandler.GetProfile)
 	v1.Post("/me/pro", userHandler.ActivatePro)
+	v1.Post("/sync-purchases", userHandler.SyncPurchases)
 	v1.Post("/me/delete", userHandler.DeleteAccount)
 	v1.Get("/providers", userHandler.GetProviders)
 	v1.Get("/history", userHandler.GetHistory)

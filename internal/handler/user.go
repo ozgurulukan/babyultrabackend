@@ -16,18 +16,73 @@ import (
 	"github.com/ozgurulukan/bubsiebackend/internal/config"
 	"github.com/ozgurulukan/bubsiebackend/internal/database"
 	"github.com/ozgurulukan/bubsiebackend/internal/model"
+	"github.com/ozgurulukan/bubsiebackend/internal/service"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/storage"
+	"gorm.io/gorm"
 )
 
 type UserHandler struct {
-	cfg      *config.Config
-	registry *provider.Registry
-	storage  *storage.R2Storage
+	cfg        *config.Config
+	registry   *provider.Registry
+	storage    *storage.R2Storage
+	revenuecat *service.RevenueCatService
 }
 
-func NewUserHandler(cfg *config.Config, registry *provider.Registry, st *storage.R2Storage) *UserHandler {
-	return &UserHandler{cfg: cfg, registry: registry, storage: st}
+func NewUserHandler(cfg *config.Config, registry *provider.Registry, st *storage.R2Storage, rc *service.RevenueCatService) *UserHandler {
+	return &UserHandler{cfg: cfg, registry: registry, storage: st, revenuecat: rc}
+}
+
+// POST /api/v1/sync-purchases
+func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
+	uid, _ := c.Locals("uid").(string)
+	if uid == "" {
+		return model.ErrorResponse(c, fiber.StatusUnauthorized, "unauthorized")
+	}
+
+	if h.revenuecat == nil {
+		return model.ErrorResponse(c, fiber.StatusServiceUnavailable, "revenuecat not configured")
+	}
+
+	info, err := h.revenuecat.GetCustomerInfo(c.Context(), uid)
+	if err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to fetch purchase info: "+err.Error())
+	}
+
+	db := database.GetDB()
+
+	// Update pro status based on entitlement
+	isPro := info.Entitlements.Pro.IsActive
+	if err := db.Model(&model.User{}).
+		Where("firebase_uid = ?", uid).
+		Update("is_pro", isPro).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
+	}
+
+	// Add credits for non-subscription transactions
+	totalCredits := 0
+	for _, tx := range info.NonSubscriptionTransactions {
+		switch tx.ProductID {
+		case "com.fagore.bubsie.100credits":
+			totalCredits += 100
+		case "com.fagore.bubsie.250credits":
+			totalCredits += 250
+		case "com.fagore.bubsie.1000credits":
+			totalCredits += 1000
+		}
+	}
+	if totalCredits > 0 {
+		if err := db.Model(&model.User{}).
+			Where("firebase_uid = ?", uid).
+			Update("credits", gorm.Expr("credits + ?", totalCredits)).Error; err != nil {
+			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add credits")
+		}
+	}
+
+	return model.SuccessResponse(c, fiber.Map{
+		"is_pro":  isPro,
+		"credits": totalCredits,
+	})
 }
 
 // POST /api/v1/me/pro

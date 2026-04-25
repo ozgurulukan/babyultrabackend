@@ -9,12 +9,24 @@ import (
 	"time"
 )
 
-const revenuecatBaseURL = "https://api.revenuecat.com/v2"
+const revenuecatBaseURL = "https://api.revenuecat.com/v1"
 
 type RevenueCatService struct {
 	apiKey    string
 	projectID string
 	client   *http.Client
+}
+
+// CustomerInfo represents RevenueCat subscriber info
+type CustomerInfo struct {
+	Entitlements struct {
+		Pro struct {
+			IsActive bool `json:"is_active"`
+		} `json:"pro"`
+	} `json:"entitlements"`
+	NonSubscriptionTransactions []struct {
+		ProductID string `json:"product_id"`
+	} `json:"non_subscription_transactions"`
 }
 
 func NewRevenueCatService(apiKey, projectID string) *RevenueCatService {
@@ -94,4 +106,65 @@ func (r *RevenueCatService) GetOverview(ctx context.Context) (*RevenueStats, err
 	}
 
 	return stats, nil
+}
+
+// GetCustomerInfo fetches a subscriber's purchase info from RevenueCat REST API.
+// Requires a public or secret API key.
+func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID string) (*CustomerInfo, error) {
+	if r.apiKey == "" {
+		return nil, fmt.Errorf("revenuecat: API key not configured")
+	}
+
+	url := fmt.Sprintf("%s/subscribers/%s", revenuecatBaseURL, appUserID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("revenuecat: request error: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+r.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Platform", "ios")
+
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("revenuecat: request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("revenuecat: read response error: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("revenuecat: API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		Subscriber struct {
+			Entitlements map[string]struct {
+				IsActive bool `json:"is_active"`
+			} `json:"entitlements"`
+			NonSubscriptions map[string][]struct {
+				ProductID string `json:"id"`
+			} `json:"non_subscriptions"`
+		} `json:"subscriber"`
+	}
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("revenuecat: unmarshal error: %w", err)
+	}
+
+	var info CustomerInfo
+	if pro, ok := result.Subscriber.Entitlements["pro"]; ok {
+		info.Entitlements.Pro.IsActive = pro.IsActive
+	}
+	for _, txs := range result.Subscriber.NonSubscriptions {
+		for _, t := range txs {
+			info.NonSubscriptionTransactions = append(info.NonSubscriptionTransactions, struct {
+				ProductID string `json:"product_id"`
+			}{ProductID: t.ProductID})
+		}
+	}
+	return &info, nil
 }
