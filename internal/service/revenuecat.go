@@ -9,15 +9,15 @@ import (
 	"time"
 )
 
-const revenuecatBaseURL = "https://api.revenuecat.com/v1"
+const revenuecatBaseURL = "https://api.revenuecat.com/v2"
 
 type RevenueCatService struct {
 	apiKey    string
 	projectID string
-	client   *http.Client
+	client    *http.Client
 }
 
-// CustomerInfo represents RevenueCat subscriber info
+// CustomerInfo represents RevenueCat subscriber info (V2 format)
 type CustomerInfo struct {
 	Entitlements struct {
 		Pro struct {
@@ -33,7 +33,7 @@ func NewRevenueCatService(apiKey, projectID string) *RevenueCatService {
 	return &RevenueCatService{
 		apiKey:    apiKey,
 		projectID: projectID,
-		client:   &http.Client{Timeout: 15 * time.Second},
+		client:    &http.Client{Timeout: 15 * time.Second},
 	}
 }
 
@@ -108,14 +108,17 @@ func (r *RevenueCatService) GetOverview(ctx context.Context) (*RevenueStats, err
 	return stats, nil
 }
 
-// GetCustomerInfo fetches a subscriber's purchase info from RevenueCat REST API.
-// Requires a public or secret API key.
+// GetCustomerInfo fetches a subscriber's purchase info from RevenueCat REST API v2.
+// Requires a Secret API key (starts with sk_).
 func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID string) (*CustomerInfo, error) {
 	if r.apiKey == "" {
 		return nil, fmt.Errorf("revenuecat: API key not configured")
 	}
+	if r.projectID == "" {
+		return nil, fmt.Errorf("revenuecat: Project ID not configured")
+	}
 
-	url := fmt.Sprintf("%s/subscribers/%s", revenuecatBaseURL, appUserID)
+	url := fmt.Sprintf("%s/projects/%s/customers/%s", revenuecatBaseURL, r.projectID, appUserID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("revenuecat: request error: %w", err)
@@ -123,7 +126,6 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 
 	req.Header.Set("Authorization", "Bearer "+r.apiKey)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Platform", "ios")
 
 	resp, err := r.client.Do(req)
 	if err != nil {
@@ -140,31 +142,28 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 		return nil, fmt.Errorf("revenuecat: API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
-	var result struct {
-		Subscriber struct {
+	// RevenueCat v2 nests data under "customer"
+	var v2Result struct {
+		Customer struct {
 			Entitlements map[string]struct {
 				IsActive bool `json:"is_active"`
 			} `json:"entitlements"`
-			NonSubscriptions map[string][]struct {
-				ProductID string `json:"product_id"`
-			} `json:"non_subscriptions"`
-		} `json:"subscriber"`
+			NonSubscriptions map[string][]json.RawMessage `json:"non_subscriptions"`
+		} `json:"customer"`
 	}
 
-	if err := json.Unmarshal(body, &result); err != nil {
+	if err := json.Unmarshal(body, &v2Result); err != nil {
 		return nil, fmt.Errorf("revenuecat: unmarshal error: %w", err)
 	}
 
 	var info CustomerInfo
-	if pro, ok := result.Subscriber.Entitlements["pro"]; ok {
+	if pro, ok := v2Result.Customer.Entitlements["pro"]; ok {
 		info.Entitlements.Pro.IsActive = pro.IsActive
 	}
-	for productID, txs := range result.Subscriber.NonSubscriptions {
-		for range txs {
-			info.NonSubscriptionTransactions = append(info.NonSubscriptionTransactions, struct {
-				ProductID string `json:"product_id"`
-			}{ProductID: productID})
-		}
+	for productID := range v2Result.Customer.NonSubscriptions {
+		info.NonSubscriptionTransactions = append(info.NonSubscriptionTransactions, struct {
+			ProductID string `json:"product_id"`
+		}{ProductID: productID})
 	}
 	return &info, nil
 }
