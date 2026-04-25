@@ -142,6 +142,8 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 		return nil, fmt.Errorf("revenuecat: API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
+	fmt.Printf("[RevenueCat] GetCustomerInfo raw response: %s\n", string(body))
+
 	// RevenueCat v2 nests data under "customer"
 	var v2Result struct {
 		Customer struct {
@@ -165,5 +167,6 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 			ProductID string `json:"product_id"`
 		}{ProductID: productID})
 	}
+	fmt.Printf("[RevenueCat] Parsed: isPro=%v nonSubs=%d\n", info.Entitlements.Pro.IsActive, len(info.NonSubscriptionTransactions))
 	return &info, nil
 }

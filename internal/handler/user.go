@@ -50,7 +50,7 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to fetch purchase info: "+err.Error())
 	}
 
-	fmt.Printf("[SyncPurchases] uid=%s isPro=%v nonSubs=%d\n", uid, info.Entitlements.Pro.IsActive, len(info.NonSubscriptionTransactions))
+	fmt.Printf("[SyncPurchases] uid=%s isPro=%v nonSubs=%d nonSubDetails=%+v\n", uid, info.Entitlements.Pro.IsActive, len(info.NonSubscriptionTransactions), info.NonSubscriptionTransactions)
 
 	db := database.GetDB()
 
