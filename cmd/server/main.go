@@ -70,6 +70,8 @@ func main() {
 
 	router.Setup(app, cfg, firebase, registry, revenuecat, r2, translator)
 
+	service.StartWeeklyCreditScheduler()
+
 	go func() {
 		addr := ":" + cfg.Port
 		log.Printf("Listening on %s", addr)

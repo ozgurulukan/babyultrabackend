@@ -15,6 +15,7 @@ type User struct {
 	BanReason          string     `json:"ban_reason"`
 	DeletedAt          *time.Time `json:"deleted_at" gorm:"index"`
 	DeletionRequestedAt *time.Time `json:"deletion_requested_at" gorm:"index"`
+	LastWeeklyCreditAt *time.Time `json:"last_weekly_credit_at"`
 	LastLogin          time.Time  `json:"last_login"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
