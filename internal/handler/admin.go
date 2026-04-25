@@ -368,6 +368,7 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 		Email       string `json:"email"`
 		Name        string `json:"name"`
 		PhotoURL    string `json:"photo_url"`
+		DeviceID    string `json:"device_id"`
 		Credits     int    `json:"credits"`
 		IsPro       bool   `json:"is_pro"`
 		IsBanned    bool   `json:"is_banned"`
@@ -384,6 +385,7 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 		rows = append(rows, userRow{
 			ID: u.ID, FirebaseUID: u.FirebaseUID,
 			Email: u.Email, Name: u.Name, PhotoURL: u.PhotoURL,
+			DeviceID: u.DeviceID,
 			Credits: u.Credits, IsPro: u.IsPro,
 			IsBanned: u.IsBanned, BanReason: u.BanReason,
 			TotalUsage: usage,
