@@ -397,12 +397,23 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 		TotalUsage  int64  `json:"total_usage"`
 		LastLogin   string `json:"last_login"`
 		CreatedAt   string `json:"created_at"`
+		DeviceBanID uint   `json:"device_ban_id"`
 	}
 
 	rows := make([]userRow, 0, len(users))
 	for _, u := range users {
 		var usage int64
 		db.Model(&model.RequestLog{}).Where("firebase_uid = ?", u.FirebaseUID).Count(&usage)
+
+		var ban model.DeviceBan
+		var deviceBanID uint
+		if u.DeviceID != "" {
+			res := db.Where("device_id = ?", u.DeviceID).First(&ban)
+			if res.Error == nil {
+				deviceBanID = ban.ID
+			}
+		}
+
 		rows = append(rows, userRow{
 			ID: u.ID, FirebaseUID: u.FirebaseUID,
 			Email: u.Email, Name: u.Name, PhotoURL: u.PhotoURL,
@@ -412,6 +423,7 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 			TotalUsage: usage,
 			LastLogin: u.LastLogin.UTC().Format(time.RFC3339),
 			CreatedAt: u.CreatedAt.UTC().Format(time.RFC3339),
+			DeviceBanID: deviceBanID,
 		})
 	}
 
