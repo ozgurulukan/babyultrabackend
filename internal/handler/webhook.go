@@ -7,6 +7,7 @@ import (
 	"github.com/ozgurulukan/bubsiebackend/internal/config"
 	"github.com/ozgurulukan/bubsiebackend/internal/database"
 	"github.com/ozgurulukan/bubsiebackend/internal/model"
+	"gorm.io/gorm"
 )
 
 type WebhookHandler struct {
@@ -40,31 +41,49 @@ func (h *WebhookHandler) RevenueCatWebhook(c *fiber.Ctx) error {
 
 	db := database.GetDB()
 
-	switch payload.Event.Type {
-	case "INITIAL_PURCHASE", "RENEWAL", "NON_RENEWING_PURCHASE", "PRODUCT_CHANGE":
-		if len(payload.Event.EntitlementIDs) > 0 {
-			if err := db.Model(&model.User{}).
-				Where("firebase_uid = ?", uid).
-				Updates(map[string]interface{}{
-					"is_pro":     true,
-					"updated_at": time.Now(),
-				}).Error; err != nil {
-				return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
-			}
+	// Update pro status based on entitlements for all event types
+	if len(payload.Event.EntitlementIDs) > 0 {
+		if err := db.Model(&model.User{}).
+			Where("firebase_uid = ?", uid).
+			Updates(map[string]interface{}{
+				"is_pro":     true,
+				"updated_at": time.Now(),
+			}).Error; err != nil {
+			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
 		}
-	case "EXPIRATION", "CANCELLATION":
-		// Only set is_pro=false if there are no remaining entitlements
-		if len(payload.Event.EntitlementIDs) == 0 {
-			if err := db.Model(&model.User{}).
-				Where("firebase_uid = ?", uid).
-				Updates(map[string]interface{}{
-					"is_pro":     false,
-					"updated_at": time.Now(),
-				}).Error; err != nil {
-				return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
-			}
+	} else if payload.Event.Type == "EXPIRATION" || payload.Event.Type == "CANCELLATION" {
+		if err := db.Model(&model.User{}).
+			Where("firebase_uid = ?", uid).
+			Updates(map[string]interface{}{
+				"is_pro":     false,
+				"updated_at": time.Now(),
+			}).Error; err != nil {
+			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
+		}
+	}
+
+	// Add credits for consumable / one-time purchases
+	creditsToAdd := creditsForProduct(payload.Event.ProductID)
+	if creditsToAdd > 0 {
+		if err := db.Model(&model.User{}).
+			Where("firebase_uid = ?", uid).
+			Update("credits", gorm.Expr("credits + ?", creditsToAdd)).Error; err != nil {
+			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add credits")
 		}
 	}
 
 	return c.SendStatus(fiber.StatusOK)
+}
+
+func creditsForProduct(productID string) int {
+	switch productID {
+	case "com.bubsie.credits.100":
+		return 100
+	case "com.bubsie.credits.250":
+		return 250
+	case "com.bubsie.credits.1000":
+		return 1000
+	default:
+		return 0
+	}
 }
