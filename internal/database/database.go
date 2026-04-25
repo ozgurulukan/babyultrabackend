@@ -41,6 +41,7 @@ func Connect() {
 		&model.Note{},
 		&model.DeletionRequest{},
 		&model.DeviceBan{},
+		&model.Purchase{},
 	); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}

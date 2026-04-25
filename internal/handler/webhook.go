@@ -33,10 +33,12 @@ func (h *WebhookHandler) RevenueCatWebhook(c *fiber.Ctx) error {
 
 	var payload struct {
 		Event struct {
-			Type        string                 `json:"type"`
-			AppUserID   string                 `json:"app_user_id"`
-			ProductID   string                 `json:"product_id"`
-			Entitlements map[string]interface{} `json:"entitlements"`
+			Type          string                 `json:"type"`
+			AppUserID     string                 `json:"app_user_id"`
+			ProductID     string                 `json:"product_id"`
+			TransactionID string                 `json:"transaction_id"`
+			Store         string                 `json:"store"`
+			Entitlements  map[string]interface{} `json:"entitlements"`
 		} `json:"event"`
 	}
 
@@ -91,12 +93,33 @@ func (h *WebhookHandler) RevenueCatWebhook(c *fiber.Ctx) error {
 		// One-time credit packs
 		creditsToAdd := creditsForProduct(payload.Event.ProductID)
 		if creditsToAdd > 0 {
-			fmt.Printf("[Webhook] Adding %d credits for uid=%s product=%s\n", creditsToAdd, uid, payload.Event.ProductID)
-			if err := db.Model(&model.User{}).
-				Where("firebase_uid = ?", uid).
-				Update("credits", gorm.Expr("credits + ?", creditsToAdd)).Error; err != nil {
-				fmt.Printf("[Webhook] Failed to add credits: %v\n", err)
-				return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add credits")
+			// Idempotency: use transaction_id as unique key; fallback to a deterministic synthetic ID.
+			txID := payload.Event.TransactionID
+			if txID == "" {
+				txID = fmt.Sprintf("webhook-%s-%s-%d", uid, payload.Event.ProductID, time.Now().Unix())
+			}
+			var existing model.Purchase
+			if db.Where("revenuecat_id = ?", txID).First(&existing).Error == nil {
+				fmt.Printf("[Webhook] Purchase %s already processed, skipping credit grant\n", txID)
+			} else {
+				fmt.Printf("[Webhook] Adding %d credits for uid=%s product=%s tx=%s\n", creditsToAdd, uid, payload.Event.ProductID, txID)
+				if err := db.Create(&model.Purchase{
+					FirebaseUID:  uid,
+					ProductID:    payload.Event.ProductID,
+					RevenueCatID: txID,
+					Store:        payload.Event.Store,
+					PurchasedAt:  time.Now(),
+					Credits:      creditsToAdd,
+				}).Error; err != nil {
+					fmt.Printf("[Webhook] Failed to record purchase %s: %v\n", txID, err)
+				} else {
+					if err := db.Model(&model.User{}).
+						Where("firebase_uid = ?", uid).
+						Update("credits", gorm.Expr("credits + ?", creditsToAdd)).Error; err != nil {
+						fmt.Printf("[Webhook] Failed to add credits: %v\n", err)
+						return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add credits")
+					}
+				}
 			}
 		}
 

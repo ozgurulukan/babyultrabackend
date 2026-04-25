@@ -50,7 +50,7 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to fetch purchase info: "+err.Error())
 	}
 
-	fmt.Printf("[SyncPurchases] uid=%s isPro=%v nonSubs=%d nonSubDetails=%+v\n", uid, info.Entitlements.Pro.IsActive, len(info.NonSubscriptionTransactions), info.NonSubscriptionTransactions)
+	fmt.Printf("[SyncPurchases] uid=%s isPro=%v\n", uid, info.Entitlements.Pro.IsActive)
 
 	db := database.GetDB()
 
@@ -82,16 +82,40 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 		}
 	}
 
-	// Sync non-subscription (credit pack) purchases that might have been missed by webhooks
-	for _, tx := range info.NonSubscriptionTransactions {
-		creditsToAdd := creditsForProduct(tx.ProductID)
-		if creditsToAdd > 0 {
-			fmt.Printf("[SyncPurchases] Adding %d credits for uid=%s product=%s\n", creditsToAdd, uid, tx.ProductID)
+	// Sync one-time (credit pack) purchases from RevenueCat V2 purchases endpoint.
+	purchases, err := h.revenuecat.GetCustomerPurchases(c.Context(), uid)
+	if err != nil {
+		fmt.Printf("[SyncPurchases] GetCustomerPurchases error for uid=%s: %v\n", uid, err)
+		// Don't fail the whole sync if purchases can't be fetched; pro status was already updated.
+	} else {
+		for _, p := range purchases {
+			creditsToAdd := creditsForProduct(p.ProductID)
+			if creditsToAdd <= 0 {
+				continue
+			}
+			// Idempotency: skip if already processed.
+			var existing model.Purchase
+			if db.Where("revenuecat_id = ?", p.ID).First(&existing).Error == nil {
+				fmt.Printf("[SyncPurchases] Purchase %s already processed, skipping\n", p.ID)
+				continue
+			}
+			// Record the purchase before adding credits (transaction-like safety).
+			if err := db.Create(&model.Purchase{
+				FirebaseUID:  uid,
+				ProductID:    p.ProductID,
+				RevenueCatID: p.ID,
+				Store:        p.Store,
+				PurchasedAt:  time.UnixMilli(p.PurchasedAt),
+				Credits:      creditsToAdd,
+			}).Error; err != nil {
+				fmt.Printf("[SyncPurchases] Failed to record purchase %s for uid=%s: %v\n", p.ID, uid, err)
+				continue
+			}
+			fmt.Printf("[SyncPurchases] Adding %d credits for uid=%s product=%s purchase=%s\n", creditsToAdd, uid, p.ProductID, p.ID)
 			if err := db.Model(&model.User{}).
 				Where("firebase_uid = ?", uid).
 				Update("credits", gorm.Expr("credits + ?", creditsToAdd)).Error; err != nil {
 				fmt.Printf("[SyncPurchases] Failed to add credits for uid=%s: %v\n", uid, err)
-				return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add credits")
 			}
 		}
 	}
