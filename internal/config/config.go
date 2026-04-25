@@ -51,7 +51,7 @@ func Load() *Config {
 		Port:               getEnv("PORT", "3000"),
 		AdminEmail:         getEnv("ADMIN_EMAIL", ""),
 		FirebaseConfigPath: getEnv("FIREBASE_CONFIG_PATH", "./firebase-service-account.json"),
-		InitialCredits:     getEnvInt("INITIAL_CREDITS", 2),
+        InitialCredits:     getEnvInt("INITIAL_CREDITS", 5),
 
 		FalAIKey:      getEnv("FAL_AI_KEY", ""),
 		ReplicateKey:  getEnv("REPLICATE_KEY", ""),
