@@ -620,7 +620,13 @@
             <!-- Logs Tab -->
             <div x-show="tab === 'logs'" class="fade-in">
                 <div class="flex items-center justify-between mb-6">
-                    <h1 class="text-2xl font-bold">Request logs</h1>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl font-bold">Request logs</h1>
+                        <button x-show="selectedLogIds.length" @click="deleteSelectedLogs()" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            <span x-text="'Sil (' + selectedLogIds.length + ')'"></span>
+                        </button>
+                    </div>
                     <button @click="fetchLogs()" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                         Refresh
@@ -632,6 +638,9 @@
                         <table class="w-full text-sm">
                             <thead class="bg-gray-800/50">
                                 <tr>
+                                    <th class="text-left px-4 py-3 font-medium text-gray-400 w-10">
+                                        <input type="checkbox" @change="toggleSelectAllLogs($event.target.checked)" :checked="logs.length && selectedLogIds.length === logs.length" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600 focus:ring-brand-500">
+                                    </th>
                                     <th class="text-left px-4 py-3 font-medium text-gray-400">Date</th>
                                     <th class="text-left px-4 py-3 font-medium text-gray-400">UID</th>
                                     <th class="text-left px-4 py-3 font-medium text-gray-400">Photos</th>
@@ -645,6 +654,9 @@
                             <tbody class="divide-y divide-gray-800">
                                 <template x-for="log in logs" :key="log.id">
                                     <tr class="hover:bg-gray-800/30 transition">
+                                        <td class="px-4 py-3">
+                                            <input type="checkbox" :value="log.id" x-model="selectedLogIds" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600 focus:ring-brand-500">
+                                        </td>
                                         <td class="px-4 py-3 text-gray-300 whitespace-nowrap" x-text="formatDate(log.created_at)"></td>
                                         <td class="px-4 py-3">
                                             <code class="text-xs text-gray-400" x-text="log.firebase_uid || '—'"></code>
@@ -680,7 +692,7 @@
                                     </tr>
                                 </template>
                                 <tr x-show="!logs.length">
-                                    <td colspan="8" class="px-4 py-12 text-center text-gray-500">No logs yet</td>
+                                    <td colspan="9" class="px-4 py-12 text-center text-gray-500">No logs yet</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2274,6 +2286,7 @@
             stats: null,
             logs: [],
             logsMeta: { page: 1, limit: 20, total: 0 },
+            selectedLogIds: [],
             providerList: [],
             notes: [],
             reports: [],
@@ -2515,8 +2528,34 @@
                     const data = await this.api(`/api/admin/logs?page=${this.logsMeta.page}&limit=${this.logsMeta.limit}`);
                     this.logs = data.logs || [];
                     this.logsMeta.total = data.total || 0;
+                    this.selectedLogIds = [];
                 } catch (e) {
                     this.showToast('Failed to load logs', 'error');
+                }
+            },
+
+            toggleSelectAllLogs(checked) {
+                if (checked) {
+                    this.selectedLogIds = this.logs.map(l => l.id);
+                } else {
+                    this.selectedLogIds = [];
+                }
+            },
+
+            async deleteSelectedLogs() {
+                if (!this.selectedLogIds.length) return;
+                if (!confirm(this.selectedLogIds.length + ' log kaydını silmek istediğinize emin misiniz?')) return;
+                try {
+                    await this.api('/api/admin/logs', {
+                        method: 'DELETE',
+                        body: JSON.stringify({ ids: this.selectedLogIds })
+                    });
+                    this.showToast(this.selectedLogIds.length + ' log silindi');
+                    this.selectedLogIds = [];
+                    this.fetchLogs();
+                    this.fetchStats();
+                } catch (e) {
+                    this.showToast('Log silinirken hata: ' + e.message, 'error');
                 }
             },
 

@@ -129,6 +129,7 @@ func Setup(
 	admin.Post("/providers/toggle", adminHandler.ToggleProvider)
 	admin.Post("/providers/update-keys", adminHandler.UpdateProviderKey)
 	admin.Get("/logs", adminHandler.GetRequestLogs)
+	admin.Delete("/logs", adminHandler.DeleteRequestLogs)
 	admin.Get("/users", adminHandler.ListUsers)
 	admin.Put("/users/:id", adminHandler.UpdateUserCredits)
 	admin.Delete("/users/:id", adminHandler.DeleteUser)

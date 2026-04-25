@@ -339,6 +339,27 @@ func (h *AdminHandler) GetRequestLogs(c *fiber.Ctx) error {
 	})
 }
 
+func (h *AdminHandler) DeleteRequestLogs(c *fiber.Ctx) error {
+	var req struct {
+		IDs []uint `json:"ids"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body")
+	}
+	if len(req.IDs) == 0 {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "no ids provided")
+	}
+
+	db := database.GetDB()
+	if err := db.Where("id IN ?", req.IDs).Delete(&model.RequestLog{}).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to delete logs")
+	}
+
+	return model.SuccessResponse(c, fiber.Map{
+		"deleted": len(req.IDs),
+	})
+}
+
 // ─── User Management ────────────────────────────────────────
 
 func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
