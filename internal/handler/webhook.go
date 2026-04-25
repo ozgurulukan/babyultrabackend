@@ -77,11 +77,11 @@ func (h *WebhookHandler) RevenueCatWebhook(c *fiber.Ctx) error {
 
 func creditsForProduct(productID string) int {
 	switch productID {
-	case "com.bubsie.credits.100":
+	case "com.fagore.bubsie.100credits":
 		return 100
-	case "com.bubsie.credits.250":
+	case "com.fagore.bubsie.250credits":
 		return 250
-	case "com.bubsie.credits.1000":
+	case "com.fagore.bubsie.1000credits":
 		return 1000
 	default:
 		return 0
