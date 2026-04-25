@@ -84,6 +84,11 @@ func Setup(
 
 	// Mobile API
 	v1 := api.Group("/v1")
+
+	// Public webhook endpoint (no auth required)
+	webhookHandler := handler.NewWebhookHandler(cfg)
+	v1.Post("/webhooks/revenuecat", webhookHandler.RevenueCatWebhook)
+
 	v1.Use(middleware.FirebaseAuth(firebase, cfg.InitialCredits))
 	v1.Use(rateLimiter.Middleware())
 

@@ -20,8 +20,9 @@ type Config struct {
 	OpenRouterKey string
 	GeminiKey     string
 
-	RevenueCatAPIKey    string
-	RevenueCatProjectID string
+	RevenueCatAPIKey        string
+	RevenueCatProjectID     string
+	RevenueCatWebhookSecret string
 
 	FirebaseWebAPIKey   string
 	FirebaseAuthDomain  string
@@ -58,8 +59,9 @@ func Load() *Config {
 		OpenRouterKey: getEnv("OPENROUTER_KEY", ""),
 		GeminiKey:     getEnv("GEMINI_KEY", ""),
 
-		RevenueCatAPIKey:    getEnv("REVENUECAT_API_KEY", ""),
-		RevenueCatProjectID: getEnv("REVENUECAT_PROJECT_ID", ""),
+		RevenueCatAPIKey:        getEnv("REVENUECAT_API_KEY", ""),
+		RevenueCatProjectID:     getEnv("REVENUECAT_PROJECT_ID", ""),
+		RevenueCatWebhookSecret: getEnv("REVENUECAT_WEBHOOK_SECRET", ""),
 
 		FirebaseWebAPIKey:   getEnv("FIREBASE_WEB_API_KEY", ""),
 		FirebaseAuthDomain:  getEnv("FIREBASE_AUTH_DOMAIN", ""),
