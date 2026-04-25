@@ -46,8 +46,11 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 
 	info, err := h.revenuecat.GetCustomerInfo(c.Context(), uid)
 	if err != nil {
+		fmt.Printf("[SyncPurchases] GetCustomerInfo error for uid=%s: %v\n", uid, err)
 		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to fetch purchase info: "+err.Error())
 	}
+
+	fmt.Printf("[SyncPurchases] uid=%s isPro=%v nonSubs=%d\n", uid, info.Entitlements.Pro.IsActive, len(info.NonSubscriptionTransactions))
 
 	db := database.GetDB()
 
@@ -56,6 +59,7 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 	if err := db.Model(&model.User{}).
 		Where("firebase_uid = ?", uid).
 		Update("is_pro", isPro).Error; err != nil {
+		fmt.Printf("[SyncPurchases] Failed to update pro status for uid=%s: %v\n", uid, err)
 		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
 	}
 
@@ -73,7 +77,22 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 				"last_weekly_credit_at": now,
 				"updated_at":            now,
 			}).Error; err != nil {
+			fmt.Printf("[SyncPurchases] Failed to add weekly credits for uid=%s: %v\n", uid, err)
 			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add weekly credits")
+		}
+	}
+
+	// Sync non-subscription (credit pack) purchases that might have been missed by webhooks
+	for _, tx := range info.NonSubscriptionTransactions {
+		creditsToAdd := creditsForProduct(tx.ProductID)
+		if creditsToAdd > 0 {
+			fmt.Printf("[SyncPurchases] Adding %d credits for uid=%s product=%s\n", creditsToAdd, uid, tx.ProductID)
+			if err := db.Model(&model.User{}).
+				Where("firebase_uid = ?", uid).
+				Update("credits", gorm.Expr("credits + ?", creditsToAdd)).Error; err != nil {
+				fmt.Printf("[SyncPurchases] Failed to add credits for uid=%s: %v\n", uid, err)
+				return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to add credits")
+			}
 		}
 	}
 
