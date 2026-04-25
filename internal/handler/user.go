@@ -19,7 +19,6 @@ import (
 	"github.com/ozgurulukan/bubsiebackend/internal/service"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/storage"
-	"gorm.io/gorm"
 )
 
 type UserHandler struct {
