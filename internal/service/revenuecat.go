@@ -118,7 +118,7 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 		return nil, fmt.Errorf("revenuecat: Project ID not configured")
 	}
 
-	url := fmt.Sprintf("%s/projects/%s/customers/%s?expand=non_subscriptions", revenuecatBaseURL, r.projectID, appUserID)
+	url := fmt.Sprintf("%s/projects/%s/customers/%s", revenuecatBaseURL, r.projectID, appUserID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("revenuecat: request error: %w", err)
@@ -146,7 +146,6 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 
 	// RevenueCat v2 nests data under "customer"
 	// active_entitlements.items[] contains active entitlements
-	// non_subscriptions map contains one-time purchases when expanded
 	var v2Result struct {
 		Customer struct {
 			ActiveEntitlements struct {
@@ -154,7 +153,6 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 					EntitlementID string `json:"entitlement_id"`
 				} `json:"items"`
 			} `json:"active_entitlements"`
-			NonSubscriptions map[string][]json.RawMessage `json:"non_subscriptions"`
 		} `json:"customer"`
 	}
 
@@ -165,11 +163,6 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 	var info CustomerInfo
 	// V2: active_entitlements.items indicates active entitlement status
 	info.Entitlements.Pro.IsActive = len(v2Result.Customer.ActiveEntitlements.Items) > 0
-	for productID := range v2Result.Customer.NonSubscriptions {
-		info.NonSubscriptionTransactions = append(info.NonSubscriptionTransactions, struct {
-			ProductID string `json:"product_id"`
-		}{ProductID: productID})
-	}
 	fmt.Printf("[RevenueCat] Parsed: isPro=%v\n", info.Entitlements.Pro.IsActive)
 	return &info, nil
 }
