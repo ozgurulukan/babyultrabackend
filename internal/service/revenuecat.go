@@ -159,11 +159,11 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 	if pro, ok := result.Subscriber.Entitlements["pro"]; ok {
 		info.Entitlements.Pro.IsActive = pro.IsActive
 	}
-	for _, txs := range result.Subscriber.NonSubscriptions {
-		for _, t := range txs {
+	for productID, txs := range result.Subscriber.NonSubscriptions {
+		for range txs {
 			info.NonSubscriptionTransactions = append(info.NonSubscriptionTransactions, struct {
 				ProductID string `json:"product_id"`
-			}{ProductID: t.ProductID})
+			}{ProductID: productID})
 		}
 	}
 	return &info, nil
