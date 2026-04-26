@@ -63,8 +63,28 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
 	}
 
-	// NOTE: Weekly Pro credits (50/week) are handled by credit_scheduler.go on Mondays.
-	// Do NOT grant weekly credits here to avoid double-granting when users buy credit packs.
+	// Grant weekly Pro credits (50/week) if the user is Pro and hasn't received credits this week.
+	// This also covers the initial subscription purchase grant.
+	if isPro {
+		now := time.Now().UTC()
+		weekStart := now.AddDate(0, 0, -int(now.Weekday()-time.Monday))
+		weekStart = time.Date(weekStart.Year(), weekStart.Month(), weekStart.Day(), 0, 0, 0, 0, time.UTC)
+
+		var user model.User
+		if err := db.Where("firebase_uid = ?", uid).First(&user).Error; err == nil {
+			if user.LastWeeklyCreditAt == nil || user.LastWeeklyCreditAt.Before(weekStart) {
+				fmt.Printf("[SyncPurchases] Granting 50 weekly credits to uid=%s (last=%v)\n", uid, user.LastWeeklyCreditAt)
+				if err := db.Model(&model.User{}).
+					Where("firebase_uid = ?", uid).
+					Updates(map[string]interface{}{
+						"credits":               gorm.Expr("credits + ?", 50),
+						"last_weekly_credit_at": now,
+					}).Error; err != nil {
+					fmt.Printf("[SyncPurchases] Failed to grant weekly credits to uid=%s: %v\n", uid, err)
+				}
+			}
+		}
+	}
 
 	// Sync one-time (credit pack) purchases from RevenueCat V2 purchases endpoint.
 	purchases, err := h.revenuecat.GetCustomerPurchases(c.Context(), uid)
