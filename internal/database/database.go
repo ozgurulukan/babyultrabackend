@@ -46,6 +46,15 @@ func Connect() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
+	// GORM AutoMigrate does not always add new columns to existing SQLite tables.
+	// Ensure revenuecat_customer_id exists for users who already have a database.
+	if !DB.Migrator().HasColumn(&model.User{}, "revenuecat_customer_id") {
+		if err := DB.Migrator().AddColumn(&model.User{}, "revenuecat_customer_id"); err != nil {
+			log.Fatalf("Failed to add revenuecat_customer_id column: %v", err)
+		}
+		log.Println("Added revenuecat_customer_id column to users table")
+	}
+
 	// Category slug uniqueness should be scoped by (app_id, type).
 	// Use raw SQL so SQLite never recreates the table (which would lose data).
 	DB.Exec("DROP INDEX IF EXISTS idx_categories_slug")
