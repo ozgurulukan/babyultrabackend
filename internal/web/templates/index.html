@@ -2549,7 +2549,7 @@
                 try {
                     await this.api('/api/admin/logs', {
                         method: 'DELETE',
-                        body: JSON.stringify({ ids: this.selectedLogIds })
+                        body: JSON.stringify({ ids: this.selectedLogIds.map(id => parseInt(id, 10)) })
                     });
                     this.showToast(this.selectedLogIds.length + ' log silindi');
                     this.selectedLogIds = [];
