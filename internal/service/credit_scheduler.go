@@ -42,7 +42,11 @@ func grantWeeklyCredits() {
 
 	now := time.Now().UTC()
 	// Start of this week (Monday 00:00 UTC)
-	weekStart := now.AddDate(0, 0, -int(now.Weekday()-time.Monday))
+	daysSinceMonday := int(now.Weekday() - time.Monday)
+	if daysSinceMonday < 0 {
+		daysSinceMonday += 7
+	}
+	weekStart := now.AddDate(0, 0, -daysSinceMonday)
 	weekStart = time.Date(weekStart.Year(), weekStart.Month(), weekStart.Day(), 0, 0, 0, 0, time.UTC)
 
 	var users []model.User

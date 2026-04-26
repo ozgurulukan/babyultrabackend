@@ -67,13 +67,18 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 	// This also covers the initial subscription purchase grant.
 	if isPro {
 		now := time.Now().UTC()
-		weekStart := now.AddDate(0, 0, -int(now.Weekday()-time.Monday))
+		// Calculate the start of the current week (Monday 00:00 UTC)
+		daysSinceMonday := int(now.Weekday() - time.Monday)
+		if daysSinceMonday < 0 {
+			daysSinceMonday += 7
+		}
+		weekStart := now.AddDate(0, 0, -daysSinceMonday)
 		weekStart = time.Date(weekStart.Year(), weekStart.Month(), weekStart.Day(), 0, 0, 0, 0, time.UTC)
 
 		var user model.User
 		if err := db.Where("firebase_uid = ?", uid).First(&user).Error; err == nil {
 			if user.LastWeeklyCreditAt == nil || user.LastWeeklyCreditAt.Before(weekStart) {
-				fmt.Printf("[SyncPurchases] Granting 50 weekly credits to uid=%s (last=%v)\n", uid, user.LastWeeklyCreditAt)
+				fmt.Printf("[SyncPurchases] Granting 50 weekly credits to uid=%s (weekStart=%v last=%v)\n", uid, weekStart, user.LastWeeklyCreditAt)
 				if err := db.Model(&model.User{}).
 					Where("firebase_uid = ?", uid).
 					Updates(map[string]interface{}{
@@ -82,6 +87,8 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 					}).Error; err != nil {
 					fmt.Printf("[SyncPurchases] Failed to grant weekly credits to uid=%s: %v\n", uid, err)
 				}
+			} else {
+				fmt.Printf("[SyncPurchases] Skipping weekly credits for uid=%s (already granted this week at %v)\n", uid, user.LastWeeklyCreditAt)
 			}
 		}
 	}
