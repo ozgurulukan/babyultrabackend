@@ -99,7 +99,7 @@ func (h *UserHandler) SyncPurchases(c *fiber.Ctx) error {
 			}
 			// Idempotency: skip if already processed.
 			var existing model.Purchase
-			if db.Where("revenuecat_id = ?", p.ID).First(&existing).Error == nil {
+			if db.Where("revenue_cat_id = ?", p.ID).First(&existing).Error == nil {
 				fmt.Printf("[SyncPurchases] Purchase %s already processed, skipping\n", p.ID)
 				continue
 			}

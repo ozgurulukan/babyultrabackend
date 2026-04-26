@@ -99,7 +99,7 @@ func (h *WebhookHandler) RevenueCatWebhook(c *fiber.Ctx) error {
 				txID = fmt.Sprintf("webhook-%s-%s-%d", uid, payload.Event.ProductID, time.Now().Unix())
 			}
 			var existing model.Purchase
-			if db.Where("revenuecat_id = ?", txID).First(&existing).Error == nil {
+			if db.Where("revenue_cat_id = ?", txID).First(&existing).Error == nil {
 				fmt.Printf("[Webhook] Purchase %s already processed, skipping credit grant\n", txID)
 			} else {
 				fmt.Printf("[Webhook] Adding %d credits for uid=%s product=%s tx=%s\n", creditsToAdd, uid, payload.Event.ProductID, txID)
