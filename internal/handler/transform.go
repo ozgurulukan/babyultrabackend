@@ -79,6 +79,7 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 	if transformCreditCost <= 0 {
 		transformCreditCost = 1
 	}
+	log.Printf("[Transform] uid=%s provider=%s creditCost=%d", uid, req.Provider, transformCreditCost)
 	creditReserved, err := reserveTransformCredit(uid, transformCreditCost)
 	if err != nil {
 		if errors.Is(err, errInsufficientCredits) {
@@ -87,6 +88,7 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 		log.Printf("Credit reserve failed [uid=%s]: %v", uid, err)
 		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to reserve credit")
 	}
+	log.Printf("[Transform] creditReserved=%v for uid=%s", creditReserved, uid)
 
 	start := time.Now()
 
@@ -198,23 +200,30 @@ func reserveTransformCredit(uid string, cost int) (bool, error) {
 
 	var user model.User
 	if err := db.Select("id", "is_pro", "credits").Where("firebase_uid = ?", uid).First(&user).Error; err != nil {
+		log.Printf("[reserveTransformCredit] user not found [uid=%s]: %v", uid, err)
 		return false, err
 	}
 
-	if user.IsPro || cost <= 0 {
+	log.Printf("[reserveTransformCredit] user found [uid=%s] isPro=%v credits=%d cost=%d", uid, user.IsPro, user.Credits, cost)
+
+	if cost <= 0 {
+		log.Printf("[reserveTransformCredit] skipping credit deduction [uid=%s] reason=cost<=0", uid)
 		return false, nil
 	}
 
 	res := db.Model(&model.User{}).
-		Where("id = ? AND is_pro = ? AND credits >= ?", user.ID, false, cost).
+		Where("id = ? AND credits >= ?", user.ID, cost).
 		Update("credits", gorm.Expr("credits - ?", cost))
 	if res.Error != nil {
+		log.Printf("[reserveTransformCredit] update error [uid=%s]: %v", uid, res.Error)
 		return false, res.Error
 	}
 	if res.RowsAffected == 0 {
+		log.Printf("[reserveTransformCredit] insufficient credits [uid=%s] rowsAffected=0", uid)
 		return false, errInsufficientCredits
 	}
 
+	log.Printf("[reserveTransformCredit] credit deducted [uid=%s] cost=%d remaining=%d", uid, cost, user.Credits-cost)
 	return true, nil
 }
 
@@ -227,7 +236,7 @@ func refundTransformCredit(uid string, cost int) {
 		return
 	}
 	if err := db.Model(&model.User{}).
-		Where("firebase_uid = ? AND is_pro = ?", uid, false).
+		Where("firebase_uid = ?", uid).
 		Update("credits", gorm.Expr("credits + ?", cost)).Error; err != nil {
 		log.Printf("Credit refund failed [uid=%s]: %v", uid, err)
 	}
