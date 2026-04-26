@@ -159,13 +159,14 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 		Count(&todaySuccess)
 
 	return model.SuccessResponse(c, fiber.Map{
-		"uid":       uid,
-		"email":     email,
-		"name":      user.Name,
-		"photo":     user.PhotoURL,
-		"credits":   user.Credits,
-		"is_pro":    user.IsPro,
-		"is_banned": user.IsBanned,
+		"uid":                    uid,
+		"email":                  email,
+		"name":                   user.Name,
+		"photo":                  user.PhotoURL,
+		"credits":                user.Credits,
+		"revenuecat_customer_id": user.RevenueCatCustomerID,
+		"is_pro":                 user.IsPro,
+		"is_banned":              user.IsBanned,
 		"usage": fiber.Map{
 			"today_total":   todayUsage,
 			"today_success": todaySuccess,

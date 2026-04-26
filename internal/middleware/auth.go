@@ -233,10 +233,11 @@ func upsertUser(uid string, claims map[string]interface{}, installSeed string, d
 	picture, _ := claims["picture"].(string)
 
 	updates := map[string]interface{}{
-		"email":      email,
-		"name":       name,
-		"photo_url":  picture,
-		"last_login": time.Now(),
+		"email":                  email,
+		"name":                   name,
+		"photo_url":              picture,
+		"revenuecat_customer_id": uid,
+		"last_login":             time.Now(),
 	}
 	if deviceID != "" {
 		updates["device_id"] = deviceID
@@ -267,13 +268,14 @@ func upsertUser(uid string, claims map[string]interface{}, installSeed string, d
 	}
 
 	createErr := db.Create(&model.User{
-		FirebaseUID: uid,
-		Email:       email,
-		Name:        name,
-		PhotoURL:    picture,
-		DeviceID:    deviceID,
-		Credits:     credits,
-		LastLogin:   time.Now(),
+		FirebaseUID:          uid,
+		Email:                email,
+		Name:                 name,
+		PhotoURL:             picture,
+		DeviceID:             deviceID,
+		RevenueCatCustomerID: uid,
+		Credits:              credits,
+		LastLogin:            time.Now(),
 	}).Error
 	if createErr == nil {
 		return nil

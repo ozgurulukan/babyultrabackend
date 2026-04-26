@@ -9,8 +9,9 @@ type User struct {
 	Name               string     `json:"name"`
 	PhotoURL           string     `json:"photo_url"`
 	DeviceID           string     `json:"device_id" gorm:"index"`
-	Credits            int        `json:"credits" gorm:"default:5"`
-	IsPro              bool       `json:"is_pro" gorm:"default:false"`
+	Credits              int        `json:"credits" gorm:"default:5"`
+	RevenueCatCustomerID string     `json:"revenuecat_customer_id" gorm:"index"`
+	IsPro                bool       `json:"is_pro" gorm:"default:false"`
 	IsBanned           bool       `json:"is_banned" gorm:"default:false;index"`
 	BanReason          string     `json:"ban_reason"`
 	DeletedAt          *time.Time `json:"deleted_at" gorm:"index"`
