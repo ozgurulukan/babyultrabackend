@@ -48,8 +48,8 @@ func Connect() {
 
 	// GORM AutoMigrate does not always add new columns to existing SQLite tables.
 	// Ensure revenuecat_customer_id exists for users who already have a database.
-	if !DB.Migrator().HasColumn(&model.User{}, "revenuecat_customer_id") {
-		if err := DB.Migrator().AddColumn(&model.User{}, "revenuecat_customer_id"); err != nil {
+	if !DB.Migrator().HasColumn(&model.User{}, "RevenueCatCustomerID") {
+		if err := DB.Migrator().AddColumn(&model.User{}, "RevenueCatCustomerID"); err != nil {
 			log.Fatalf("Failed to add revenuecat_customer_id column: %v", err)
 		}
 		log.Println("Added revenuecat_customer_id column to users table")
