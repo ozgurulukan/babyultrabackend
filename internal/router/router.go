@@ -102,6 +102,26 @@ func Setup(
 	v1.Post("/chat", chatLimiter.Middleware(), chatHandler.Chat)
 	v1.Post("/reports", reportHandler.CreateReport)
 
+	v1.Get("/me", userHandler.GetProfile)
+	v1.Post("/me/pro", userHandler.ActivatePro)
+	v1.Post("/sync-purchases", userHandler.SyncPurchases)
+	v1.Post("/me/delete", userHandler.DeleteAccount)
+	v1.Get("/providers", userHandler.GetProviders)
+	v1.Get("/history", userHandler.GetHistory)
+	v1.Delete("/history/:id", userHandler.DeleteHistoryItem)
+	v1.Post("/history/:id/delete", userHandler.DeleteHistoryItem)
+
+	v1.Get("/categories", contentHandler.GetCategories)
+	v1.Get("/templates", contentHandler.GetTemplates)
+	v1.Get("/slider", contentHandler.GetSlider)
+	v1.Get("/quick-buttons", contentHandler.GetQuickButtons)
+	v1.Get("/onboarding", contentHandler.GetOnboarding)
+	v1.Get("/reviews", contentHandler.GetReviews)
+	v1.Get("/languages", contentHandler.GetLanguages)
+
+	v1.Post("/device-token", notificationHandler.RegisterDeviceToken)
+	v1.Delete("/device-token", notificationHandler.DeleteDeviceToken)
+
 	// Admin API
 	admin := api.Group("/admin")
 	admin.Use(middleware.LightweightFirebaseAuth(cfg.FirebaseProjectID, cfg.AdminEmail))
