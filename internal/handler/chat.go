@@ -79,7 +79,7 @@ func (h *ChatHandler) Chat(c *fiber.Ctx) error {
 	}
 
 	payload := map[string]interface{}{
-		"model":       "deepseek-chat",
+		"model":       "deepseek-v4-flash",
 		"messages":    messages,
 		"temperature": 0.7,
 		"max_tokens":  2048,

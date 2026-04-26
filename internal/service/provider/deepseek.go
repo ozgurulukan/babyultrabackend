@@ -12,7 +12,7 @@ import (
 
 const (
 	deepseekBaseURL    = "https://api.deepseek.com/v1"
-	deepseekDefaultModel = "deepseek-chat"
+	deepseekDefaultModel = "deepseek-v4-flash"
 )
 
 type DeepSeek struct {

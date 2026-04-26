@@ -81,7 +81,7 @@ Text to translate: "%s"
 Return ONLY the JSON object, no markdown, no explanation.`, sourceLang, langList, text)
 
 	payload := map[string]interface{}{
-		"model": "deepseek-chat",
+		"model": "deepseek-v4-flash",
 		"messages": []map[string]interface{}{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userPrompt},
