@@ -12,9 +12,10 @@ import (
 const revenuecatBaseURL = "https://api.revenuecat.com/v2"
 
 type RevenueCatService struct {
-	apiKey    string
-	projectID string
-	client    *http.Client
+	apiKey          string
+	projectID       string
+	client          *http.Client
+	productIDCache  map[string]string // RevenueCat product ID -> store identifier
 }
 
 // CustomerInfo represents RevenueCat subscriber info (V2 format)
@@ -31,10 +32,51 @@ type CustomerInfo struct {
 
 func NewRevenueCatService(apiKey, projectID string) *RevenueCatService {
 	return &RevenueCatService{
-		apiKey:    apiKey,
-		projectID: projectID,
-		client:    &http.Client{Timeout: 15 * time.Second},
+		apiKey:         apiKey,
+		projectID:      projectID,
+		client:         &http.Client{Timeout: 15 * time.Second},
+		productIDCache: make(map[string]string),
 	}
+}
+
+// loadProductMapping fetches RevenueCat products and maps internal IDs to store identifiers.
+func (r *RevenueCatService) loadProductMapping(ctx context.Context) error {
+	url := fmt.Sprintf("%s/projects/%s/products", revenuecatBaseURL, r.projectID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+r.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("products API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		Items []struct {
+			ID              string `json:"id"`
+			StoreIdentifier string `json:"store_identifier"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return err
+	}
+	for _, p := range result.Items {
+		r.productIDCache[p.ID] = p.StoreIdentifier
+	}
+	fmt.Printf("[RevenueCat] Loaded %d product mappings\n", len(r.productIDCache))
+	return nil
 }
 
 type RevenueStats struct {
@@ -144,16 +186,14 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 
 	fmt.Printf("[RevenueCat] GetCustomerInfo raw response: %s\n", string(body))
 
-	// RevenueCat v2 nests data under "customer"
-	// active_entitlements.items[] contains active entitlements
+	// RevenueCat v2 GetCustomer returns active_entitlements at root level (no "customer" wrapper)
 	var v2Result struct {
-		Customer struct {
-			ActiveEntitlements struct {
-				Items []struct {
-					EntitlementID string `json:"entitlement_id"`
-				} `json:"items"`
-			} `json:"active_entitlements"`
-		} `json:"customer"`
+		ActiveEntitlements struct {
+			Items []struct {
+				EntitlementID string `json:"entitlement_id"`
+				ExpiresAt     int64  `json:"expires_at"`
+			} `json:"items"`
+		} `json:"active_entitlements"`
 	}
 
 	if err := json.Unmarshal(body, &v2Result); err != nil {
@@ -161,8 +201,14 @@ func (r *RevenueCatService) GetCustomerInfo(ctx context.Context, appUserID strin
 	}
 
 	var info CustomerInfo
-	// V2: active_entitlements.items indicates active entitlement status
-	info.Entitlements.Pro.IsActive = len(v2Result.Customer.ActiveEntitlements.Items) > 0
+	// V2: active_entitlements.items indicates active entitlement status (check expiry)
+	now := time.Now().UnixMilli()
+	for _, e := range v2Result.ActiveEntitlements.Items {
+		if e.ExpiresAt == 0 || e.ExpiresAt > now {
+			info.Entitlements.Pro.IsActive = true
+			break
+		}
+	}
 	fmt.Printf("[RevenueCat] Parsed: isPro=%v\n", info.Entitlements.Pro.IsActive)
 	return &info, nil
 }
@@ -215,6 +261,19 @@ func (r *RevenueCatService) GetCustomerPurchases(ctx context.Context, appUserID 
 	}
 	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, fmt.Errorf("revenuecat: unmarshal error: %w", err)
+	}
+
+	// Translate RevenueCat internal product IDs to store identifiers for credit mapping.
+	if len(r.productIDCache) == 0 {
+		if err := r.loadProductMapping(ctx); err != nil {
+			fmt.Printf("[RevenueCat] Failed to load product mapping: %v\n", err)
+		}
+	}
+	for i := range result.Items {
+		if storeID, ok := r.productIDCache[result.Items[i].ProductID]; ok && storeID != "" {
+			fmt.Printf("[RevenueCat] Mapped product %s -> %s\n", result.Items[i].ProductID, storeID)
+			result.Items[i].ProductID = storeID
+		}
 	}
 
 	fmt.Printf("[RevenueCat] Parsed purchases: %d\n", len(result.Items))
