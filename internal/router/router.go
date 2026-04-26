@@ -71,6 +71,11 @@ func Setup(
 	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitMax, cfg.RateLimitWindow)
 	adminRateLimiter := middleware.NewRateLimiter(120, 60)
 
+	// Strict per-endpoint limiters for expensive operations
+	transformLimiter := middleware.NewRateLimiter(3, 60)
+	chatLimiter := middleware.NewRateLimiter(10, 60)
+	uploadLimiter := middleware.NewRateLimiter(5, 60)
+
 	transformHandler := handler.NewTransformHandler(registry, r2, firebase)
 	userHandler := handler.NewUserHandler(cfg, registry, r2, revenuecat)
 	adminHandler := handler.NewAdminHandler(cfg, registry, firebase, revenuecat)
@@ -92,26 +97,9 @@ func Setup(
 	v1.Use(middleware.FirebaseAuth(firebase, cfg.InitialCredits))
 	v1.Use(rateLimiter.Middleware())
 
-	v1.Post("/transform", transformHandler.Transform)
-	v1.Post("/upload", userHandler.UploadImage)
-	v1.Get("/me", userHandler.GetProfile)
-	v1.Post("/me/pro", userHandler.ActivatePro)
-	v1.Post("/sync-purchases", userHandler.SyncPurchases)
-	v1.Post("/me/delete", userHandler.DeleteAccount)
-	v1.Get("/providers", userHandler.GetProviders)
-	v1.Get("/history", userHandler.GetHistory)
-	v1.Delete("/history/:id", userHandler.DeleteHistoryItem)
-	v1.Post("/history/:id/delete", userHandler.DeleteHistoryItem)
-	v1.Get("/categories", contentHandler.GetCategories)
-	v1.Get("/templates", contentHandler.GetTemplates)
-	v1.Get("/slider", contentHandler.GetSlider)
-	v1.Get("/quick-buttons", contentHandler.GetQuickButtons)
-	v1.Get("/onboarding", contentHandler.GetOnboarding)
-	v1.Get("/reviews", contentHandler.GetReviews)
-	v1.Get("/languages", contentHandler.GetLanguages)
-	v1.Post("/device-token", notificationHandler.RegisterDeviceToken)
-	v1.Delete("/device-token", notificationHandler.DeleteDeviceToken)
-	v1.Post("/chat", chatHandler.Chat)
+	v1.Post("/transform", transformLimiter.Middleware(), transformHandler.Transform)
+	v1.Post("/upload", uploadLimiter.Middleware(), userHandler.UploadImage)
+	v1.Post("/chat", chatLimiter.Middleware(), chatHandler.Chat)
 	v1.Post("/reports", reportHandler.CreateReport)
 
 	// Admin API
