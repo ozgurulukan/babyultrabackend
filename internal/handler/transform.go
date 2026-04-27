@@ -260,6 +260,7 @@ func sendCompletionPush(fb *service.FirebaseService, uid, prompt, resultURL stri
 		return
 	}
 	if len(tokens) == 0 {
+		log.Printf("[Push] No device tokens found for uid=%s, skipping completion push", uid)
 		return
 	}
 
