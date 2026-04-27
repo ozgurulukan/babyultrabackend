@@ -493,13 +493,25 @@ func (h *AdminHandler) DeleteUser(c *fiber.Ctx) error {
 		return model.ErrorResponse(c, fiber.StatusNotFound, "user not found")
 	}
 
-	if err := db.Delete(&user).Error; err != nil {
+	uid := user.FirebaseUID
+
+	// Hard-delete all related records first
+	db.Where("firebase_uid = ?", uid).Delete(&model.Purchase{})
+	db.Where("firebase_uid = ?", uid).Delete(&model.RequestLog{})
+	db.Where("firebase_uid = ?", uid).Delete(&model.DeviceToken{})
+	db.Where("first_firebase_uid = ?", uid).Delete(&model.InstallCreditClaim{})
+	db.Where("firebase_uid = ?", uid).Delete(&model.DeletionRequest{})
+
+	// Hard-delete user (Unscoped = bypass soft-delete)
+	if err := db.Unscoped().Delete(&user).Error; err != nil {
 		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to delete user")
 	}
 
 	return model.SuccessResponse(c, fiber.Map{
-		"id":    user.ID,
-		"email": user.Email,
+		"id":           user.ID,
+		"email":        user.Email,
+		"firebase_uid": uid,
+		"deleted":      true,
 	})
 }
 
