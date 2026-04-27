@@ -1947,7 +1947,13 @@
 
                 <!-- Compose -->
                 <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-3xl">
-                    <h3 class="font-semibold mb-4">Compose notification</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold">Compose notification</h3>
+                        <button @click="fillDefaultNotification()"
+                            class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs font-medium transition">
+                            Default
+                        </button>
+                    </div>
 
                     <div class="space-y-4">
                         <div>
@@ -3405,6 +3411,38 @@
 
             resetNotificationForm() {
                 this.notifForm = { title: '', body: '', platform: 'ios', app_id: '', deep_link: '', target_uids: '' };
+                this.notifResult = null;
+            },
+
+            fillDefaultNotification() {
+                const titles = [
+                    "Look who\u2019s dancing! \ud83d\udd7a",
+                    "Next Viral Sensation? \u2b50",
+                    "New Magic Unlocked \u2728",
+                    "Pure Cuteness Alert! \ud83d\udcf8",
+                    "Fresh Styles Inside! \ud83c\udf81",
+                    "Something New for You... \ud83c\udf08",
+                    "Ready for a New Trend? \ud83d\ude80",
+                    "Your Baby\u2019s New Look \ud83d\udc7c",
+                    "Surprise! New Templates are Here \ud83c\udf8a"
+                ];
+                const bodies = [
+                    "A new viral dance challenge is waiting for your little star. See the magic now!",
+                    "Turn your baby\u2019s photo into the trendiest dance video. Try our new template!",
+                    "Discover our new \"Family Portraits\" theme. See your baby like never before!",
+                    "We\u2019ve added new AI styles. Perfect for sharing with family and friends!",
+                    "Check out the latest templates added to Bubsie today.",
+                    "New viral concepts are ready! Which one will you try first?",
+                    "Join the latest trend and create a stunning video in seconds.",
+                    "Transform your baby\u2019s photo into a masterpiece with our latest update.",
+                    "Explore the new magical themes we've just released for you."
+                ];
+                this.notifForm.title = titles[Math.floor(Math.random() * titles.length)];
+                this.notifForm.body = bodies[Math.floor(Math.random() * bodies.length)];
+                this.notifForm.platform = 'ios';
+                this.notifForm.app_id = 'bubsie';
+                this.notifForm.deep_link = 'template://the-tiny-gent';
+                this.notifForm.target_uids = '';
                 this.notifResult = null;
             },
 
