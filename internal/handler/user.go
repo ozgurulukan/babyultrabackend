@@ -19,6 +19,7 @@ import (
 	"github.com/ozgurulukan/bubsiebackend/internal/service"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/storage"
+	"github.com/ozgurulukan/bubsiebackend/internal/util/imageutil"
 	"gorm.io/gorm"
 )
 
@@ -408,6 +409,17 @@ func (h *UserHandler) UploadImage(c *fiber.Ctx) error {
 		}
 
 		contentType := http.DetectContentType(data)
+
+		// Resize uploaded image if it exceeds fal.ai limits
+		const uploadMaxDim = 3840
+		if resizedImg, format, err := imageutil.ResizeImageBytes(data, uploadMaxDim); err == nil {
+			encoded, ct, encErr := imageutil.EncodeImage(resizedImg, format, 90)
+			if encErr == nil {
+				data = encoded
+				contentType = ct
+			}
+		}
+
 		key := fmt.Sprintf("uploads/%s/%s", uid, filename)
 
 		imageURL, err := h.storage.Upload(c.Context(), key, data, contentType)

@@ -2,9 +2,13 @@ package handler
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
+	"fmt"
 	"log"
 	"net/url"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,6 +17,7 @@ import (
 	"github.com/ozgurulukan/bubsiebackend/internal/service"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
 	"github.com/ozgurulukan/bubsiebackend/internal/service/storage"
+	"github.com/ozgurulukan/bubsiebackend/internal/util/imageutil"
 	"gorm.io/gorm"
 )
 
@@ -90,22 +95,84 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 	}
 	log.Printf("[Transform] creditReserved=%v for uid=%s", creditReserved, uid)
 
+	// --- Resize images if needed (fal.ai max 3850x3850) ---
+	const falMaxDim = 3840 // safety margin under 3850
+
+	processImageURL := func(rawURL string) string {
+		if rawURL == "" {
+			return ""
+		}
+		// Skip already-processed URLs to avoid infinite loops
+		if h.storage.IsReady() && strings.Contains(rawURL, "/processed/") {
+			return rawURL
+		}
+		resizedImg, format, err := imageutil.ResizeImageFromURL(c.Context(), rawURL, falMaxDim)
+		if err != nil {
+			if !errors.Is(err, imageutil.ErrNoResizeNeeded) {
+				log.Printf("Image resize check failed for url=%s: %v", rawURL, err)
+			}
+			return rawURL
+		}
+		if !h.storage.IsReady() {
+			log.Printf("Storage not ready, cannot upload resized image")
+			return rawURL
+		}
+		data, contentType, err := imageutil.EncodeImage(resizedImg, format, 90)
+		if err != nil {
+			log.Printf("Image encode failed: %v", err)
+			return rawURL
+		}
+		randBytes := make([]byte, 8)
+		if _, err := rand.Read(randBytes); err != nil {
+			log.Printf("rand.Read failed: %v", err)
+			return rawURL
+		}
+		ext := filepath.Ext(rawURL)
+		if ext == "" || len(ext) > 5 {
+			if contentType == "image/png" {
+				ext = ".png"
+			} else {
+				ext = ".jpg"
+			}
+		}
+		key := fmt.Sprintf("processed/%s/%s_%x%s", uid, time.Now().Format("20060102_150405"), randBytes, ext)
+		newURL, err := h.storage.Upload(c.Context(), key, data, contentType)
+		if err != nil {
+			log.Printf("Resized image upload failed: %v", err)
+			return rawURL
+		}
+		log.Printf("Resized image uploaded: %s -> %s", rawURL, newURL)
+		return newURL
+	}
+
+	imageURL := processImageURL(req.ImageURL)
+	var imageURLs []string
+	for _, u := range req.ImageURLs {
+		if nu := processImageURL(u); nu != "" {
+			imageURLs = append(imageURLs, nu)
+		}
+	}
+	momImageURL := processImageURL(req.MomImageURL)
+	babyImageURL := processImageURL(req.BabyImageURL)
+	dadImageURL := processImageURL(req.DadImageURL)
+	// --------------------------------------------------------
+
 	start := time.Now()
 
 	input := &provider.TransformInput{
 		Model:           req.Model,
-		ImageURL:        req.ImageURL,
-		ImageURLs:       req.ImageURLs,
+		ImageURL:        imageURL,
+		ImageURLs:       imageURLs,
 		VideoURL:        req.VideoURL,
-		MomImageURL:     req.MomImageURL,
-		BabyImageURL:    req.BabyImageURL,
-		DadImageURL:     req.DadImageURL,
+		MomImageURL:     momImageURL,
+		BabyImageURL:    babyImageURL,
+		DadImageURL:     dadImageURL,
 		Prompt:          req.Prompt,
 		NegativePrompt:  req.NegativePrompt,
 		Params:          req.Params,
 	}
 
-	logID := createRequestLog(uid, req.Provider, req.Model, req.Prompt, req.ImageURL, "", "processing", 0)
+	logID := createRequestLog(uid, req.Provider, req.Model, req.Prompt, imageURL, "", "processing", 0)
 
 	result, err := p.Transform(c.Context(), input)
 	duration := time.Since(start).Milliseconds()
