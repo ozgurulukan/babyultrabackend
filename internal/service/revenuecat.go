@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -122,25 +123,81 @@ func (r *RevenueCatService) GetOverview(ctx context.Context) (*RevenueStats, err
 		return nil, fmt.Errorf("revenuecat: unmarshal error: %w", err)
 	}
 
+	fmt.Printf("[RevenueCat] Overview raw response: %s\n", string(body))
+
 	stats := &RevenueStats{
 		LastUpdated: time.Now().UTC().Format(time.RFC3339),
 	}
 
-	// RevenueCat v2 /overview returns metrics as an object, not an array
+	// Helper to safely read a number from interface{}
+	readNumber := func(v interface{}) float64 {
+		switch n := v.(type) {
+		case float64:
+			return n
+		case int:
+			return float64(n)
+		case int64:
+			return float64(n)
+		case string:
+			f, _ := strconv.ParseFloat(n, 64)
+			return f
+		case map[string]interface{}:
+			// nested object e.g. {"value": 123}
+			if val, ok := n["value"].(float64); ok {
+				return val
+			}
+		}
+		return 0
+	}
+
+	// Try metrics as object first
 	if metrics, ok := result["metrics"].(map[string]interface{}); ok {
-		if v, ok := metrics["mrr"].(float64); ok {
-			stats.MRR = v
-		}
-		if v, ok := metrics["revenue"].(float64); ok {
-			stats.Revenue = v
-		}
-		if v, ok := metrics["active_subscriptions"].(float64); ok {
-			stats.ActiveSubs = int(v)
-		}
-		if v, ok := metrics["active_trials"].(float64); ok {
-			stats.TrialCount = int(v)
+		stats.MRR = readNumber(metrics["mrr"])
+		stats.Revenue = readNumber(metrics["revenue"])
+		stats.ActiveSubs = int(readNumber(metrics["active_subscriptions"]))
+		stats.TrialCount = int(readNumber(metrics["active_trials"]))
+	}
+
+	// Also check root-level fields as fallback
+	if stats.MRR == 0 {
+		stats.MRR = readNumber(result["mrr"])
+	}
+	if stats.Revenue == 0 {
+		stats.Revenue = readNumber(result["revenue"])
+	}
+	if stats.ActiveSubs == 0 {
+		stats.ActiveSubs = int(readNumber(result["active_subscriptions"]))
+	}
+	if stats.TrialCount == 0 {
+		stats.TrialCount = int(readNumber(result["active_trials"]))
+	}
+
+	// Try metrics as array (older v2 format or different endpoint)
+	if stats.MRR == 0 && stats.Revenue == 0 && stats.ActiveSubs == 0 {
+		if metricsArr, ok := result["metrics"].([]interface{}); ok {
+			for _, m := range metricsArr {
+				metric, ok := m.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				name, _ := metric["name"].(string)
+				value := readNumber(metric["value"])
+				switch name {
+				case "revenue":
+					stats.Revenue = value
+				case "active_subscriptions":
+					stats.ActiveSubs = int(value)
+				case "mrr":
+					stats.MRR = value
+				case "active_trials":
+					stats.TrialCount = int(value)
+				}
+			}
 		}
 	}
+
+	fmt.Printf("[RevenueCat] Parsed stats: MRR=%.2f Revenue=%.2f ActiveSubs=%d Trials=%d\n",
+		stats.MRR, stats.Revenue, stats.ActiveSubs, stats.TrialCount)
 
 	return stats, nil
 }
