@@ -61,20 +61,9 @@ func (h *WebhookHandler) RevenueCatWebhook(c *fiber.Ctx) error {
 
 	db := database.GetDB()
 
-	// Update pro status based on entitlements for all event types
-	hasProEntitlement := len(payload.Event.Entitlements) > 0
-	if hasProEntitlement {
-		fmt.Printf("[Webhook] Setting is_pro=true for uid=%s\n", uid)
-		if err := db.Model(&model.User{}).
-			Where("firebase_uid = ?", uid).
-			Updates(map[string]interface{}{
-				"is_pro":     true,
-				"updated_at": time.Now(),
-			}).Error; err != nil {
-			fmt.Printf("[Webhook] Failed to update pro status: %v\n", err)
-			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
-		}
-	} else if payload.Event.Type == "EXPIRATION" || payload.Event.Type == "CANCELLATION" {
+	// Update pro status based on event type for reliable sync
+	switch payload.Event.Type {
+	case "EXPIRATION", "CANCELLATION", "BILLING_ISSUE", "PRODUCT_CHANGE":
 		fmt.Printf("[Webhook] Setting is_pro=false for uid=%s (event=%s)\n", uid, payload.Event.Type)
 		if err := db.Model(&model.User{}).
 			Where("firebase_uid = ?", uid).
@@ -84,6 +73,32 @@ func (h *WebhookHandler) RevenueCatWebhook(c *fiber.Ctx) error {
 			}).Error; err != nil {
 			fmt.Printf("[Webhook] Failed to update pro status: %v\n", err)
 			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
+		}
+	case "INITIAL_PURCHASE", "RENEWAL", "UNCANCELLATION", "TRANSFER":
+		fmt.Printf("[Webhook] Setting is_pro=true for uid=%s (event=%s)\n", uid, payload.Event.Type)
+		if err := db.Model(&model.User{}).
+			Where("firebase_uid = ?", uid).
+			Updates(map[string]interface{}{
+				"is_pro":     true,
+				"updated_at": time.Now(),
+			}).Error; err != nil {
+			fmt.Printf("[Webhook] Failed to update pro status: %v\n", err)
+			return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
+		}
+	default:
+		// For other events, use entitlements as fallback
+		hasProEntitlement := len(payload.Event.Entitlements) > 0
+		if hasProEntitlement {
+			fmt.Printf("[Webhook] Setting is_pro=true for uid=%s (entitlements present)\n", uid)
+			if err := db.Model(&model.User{}).
+				Where("firebase_uid = ?", uid).
+				Updates(map[string]interface{}{
+					"is_pro":     true,
+					"updated_at": time.Now(),
+				}).Error; err != nil {
+				fmt.Printf("[Webhook] Failed to update pro status: %v\n", err)
+				return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to update pro status")
+			}
 		}
 	}
 

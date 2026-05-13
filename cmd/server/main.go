@@ -70,7 +70,7 @@ func main() {
 
 	router.Setup(app, cfg, firebase, registry, revenuecat, r2, translator)
 
-	service.StartWeeklyCreditScheduler()
+	service.StartWeeklyCreditScheduler(revenuecat)
 
 	go func() {
 		addr := ":" + cfg.Port

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -12,8 +13,9 @@ import (
 const weeklyProCredits = 50
 
 // StartWeeklyCreditScheduler starts a background goroutine that runs every day
-// at 00:01. On Mondays it grants 50 credits to all active Pro users.
-func StartWeeklyCreditScheduler() {
+// at 00:01. On Mondays it grants 50 credits to all active Pro users after
+// verifying their subscription status with RevenueCat.
+func StartWeeklyCreditScheduler(rc *RevenueCatService) {
 	go func() {
 		for {
 			now := time.Now().UTC()
@@ -27,13 +29,13 @@ func StartWeeklyCreditScheduler() {
 			time.Sleep(sleep)
 
 			if time.Now().UTC().Weekday() == time.Monday {
-				grantWeeklyCredits()
+				grantWeeklyCredits(rc)
 			}
 		}
 	}()
 }
 
-func grantWeeklyCredits() {
+func grantWeeklyCredits(rc *RevenueCatService) {
 	db := database.GetDB()
 	if db == nil {
 		log.Println("[Scheduler] Database not available, skipping weekly credits")
@@ -61,6 +63,27 @@ func grantWeeklyCredits() {
 	}
 
 	for _, u := range users {
+		// RevenueCat sync: verify user still has an active Pro subscription
+		if rc != nil {
+			info, err := rc.GetCustomerInfo(context.Background(), u.FirebaseUID)
+			if err != nil {
+				log.Printf("[Scheduler] RevenueCat check failed for %s: %v", u.FirebaseUID, err)
+				continue // Skip this user, will retry next week
+			}
+			if !info.Entitlements.Pro.IsActive {
+				log.Printf("[Scheduler] User %s no longer has Pro, disabling", u.FirebaseUID)
+				if err := db.Model(&model.User{}).
+					Where("id = ?", u.ID).
+					Updates(map[string]interface{}{
+						"is_pro":     false,
+						"updated_at": now,
+					}).Error; err != nil {
+					log.Printf("[Scheduler] Failed to disable Pro for user %s: %v", u.FirebaseUID, err)
+				}
+				continue // Don't grant credits to expired Pro users
+			}
+		}
+
 		if err := db.Model(&model.User{}).
 			Where("id = ?", u.ID).
 			Updates(map[string]interface{}{
