@@ -93,7 +93,7 @@ func (r *RevenueCatService) GetOverview(ctx context.Context) (*RevenueStats, err
 		return nil, fmt.Errorf("revenuecat: API key not configured")
 	}
 
-	url := fmt.Sprintf("%s/projects/%s/overview", revenuecatBaseURL, r.projectID)
+	url := fmt.Sprintf("%s/projects/%s/metrics/overview", revenuecatBaseURL, r.projectID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("revenuecat: request error: %w", err)
