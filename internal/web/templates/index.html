@@ -473,7 +473,14 @@
 
             <!-- Revenue Tab -->
             <div x-show="tab === 'revenue'" class="fade-in" x-init="$watch('tab', v => { if(v === 'revenue') { fetchRevenueDetailed(); } })">
-                <h1 class="text-2xl font-bold mb-6">Revenue & usage analytics</h1>
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                    <h1 class="text-2xl font-bold">Revenue & usage analytics</h1>
+                    <button @click="syncProUsers()" :disabled="loading.syncPro"
+                        class="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                        <svg class="w-4 h-4" :class="loading.syncPro && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span x-text="loading.syncPro ? 'Syncing...' : 'Sync Pro Users'"></span>
+                    </button>
+                </div>
 
                 <div x-show="loading.revenue" class="flex justify-center py-20">
                     <div class="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
@@ -2364,7 +2371,7 @@
             bannedDevicesMeta: { page: 1, limit: 50, total: 0 },
             revenueData: null,
             revenueChart: null,
-            loading: { stats: false, health: false, revenue: false },
+            loading: { stats: false, health: false, revenue: false, syncPro: false },
             toast: { show: false, message: '', type: 'success' },
             sideImage: null,
 
@@ -3380,6 +3387,17 @@
                     this.showToast('Failed to load revenue data', 'error');
                 }
                 this.loading.revenue = false;
+            },
+            async syncProUsers() {
+                if (!confirm('This will check all Pro users against RevenueCat and disable expired subscriptions. Continue?')) return;
+                this.loading.syncPro = true;
+                try {
+                    const data = await this.api('/api/admin/users/sync-pro-status', { method: 'POST' });
+                    this.showToast(`Checked ${data.checked} users, disabled ${data.disabled}, errors ${data.errors}`, 'success');
+                } catch(e) {
+                    this.showToast('Sync failed: ' + e.message, 'error');
+                }
+                this.loading.syncPro = false;
             },
 
             async fetchNotificationStats() {

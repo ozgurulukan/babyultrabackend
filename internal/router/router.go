@@ -139,6 +139,7 @@ func Setup(
 	admin.Get("/logs", adminHandler.GetRequestLogs)
 	admin.Delete("/logs", adminHandler.DeleteRequestLogs)
 	admin.Get("/users", adminHandler.ListUsers)
+	admin.Post("/users/sync-pro-status", adminHandler.SyncProStatus)
 	admin.Put("/users/:id", adminHandler.UpdateUserCredits)
 	admin.Delete("/users/:id", adminHandler.DeleteUser)
 

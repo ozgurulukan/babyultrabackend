@@ -756,3 +756,60 @@ func (h *AdminHandler) UnbanDevice(c *fiber.Ctx) error {
 		"device_id": ban.DeviceID,
 	})
 }
+
+// SyncProStatus checks all users with is_pro=true against RevenueCat and disables
+// those whose subscription has expired/cancelled. Respects RevenueCat rate limits.
+func (h *AdminHandler) SyncProStatus(c *fiber.Ctx) error {
+	db := database.GetDB()
+
+	var proUsers []model.User
+	if err := db.Where("is_pro = ?", true).Find(&proUsers).Error; err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to fetch pro users")
+	}
+
+	if len(proUsers) == 0 {
+		return model.SuccessResponse(c, fiber.Map{
+			"checked":   0,
+			"disabled":  0,
+			"errors":    0,
+			"duration_ms": 0,
+		})
+	}
+
+	start := time.Now()
+	var disabled, errs int
+
+	for _, u := range proUsers {
+		info, err := h.revenuecat.GetCustomerInfo(c.Context(), u.FirebaseUID)
+		if err != nil {
+			fmt.Printf("[SyncProStatus] RevenueCat check failed for %s: %v\n", u.FirebaseUID, err)
+			errs++
+			continue
+		}
+
+		if !info.Entitlements.Pro.IsActive {
+			fmt.Printf("[SyncProStatus] Disabling Pro for user %s (subscription inactive)\n", u.FirebaseUID)
+			if err := db.Model(&model.User{}).
+				Where("id = ?", u.ID).
+				Updates(map[string]interface{}{
+					"is_pro":     false,
+					"updated_at": time.Now(),
+				}).Error; err != nil {
+				fmt.Printf("[SyncProStatus] Failed to disable Pro for %s: %v\n", u.FirebaseUID, err)
+				errs++
+			} else {
+				disabled++
+			}
+		}
+
+		// Throttle to ~5 req/s (RevenueCat customer info limit: 480/min)
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	return model.SuccessResponse(c, fiber.Map{
+		"checked":     len(proUsers),
+		"disabled":    disabled,
+		"errors":      errs,
+		"duration_ms": time.Since(start).Milliseconds(),
+	})
+}
