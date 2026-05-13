@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -123,7 +124,10 @@ func (h *AdminHandler) GetRevenueDetailed(c *fiber.Ctx) error {
 		Order("day asc").
 		Scan(&last30Days)
 
-	revenue, _ := h.revenuecat.GetOverview(c.Context())
+	revenue, revErr := h.revenuecat.GetOverview(c.Context())
+	if revErr != nil {
+		fmt.Printf("[Admin] RevenueCat overview error: %v\n", revErr)
+	}
 	if revenue == nil {
 		revenue = &service.RevenueStats{LastUpdated: now.Format(time.RFC3339)}
 	}

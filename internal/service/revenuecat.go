@@ -92,7 +92,7 @@ func (r *RevenueCatService) GetOverview(ctx context.Context) (*RevenueStats, err
 		return nil, fmt.Errorf("revenuecat: API key not configured")
 	}
 
-	url := fmt.Sprintf("%s/projects/%s/metrics/overview", revenuecatBaseURL, r.projectID)
+	url := fmt.Sprintf("%s/projects/%s/overview", revenuecatBaseURL, r.projectID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("revenuecat: request error: %w", err)
@@ -100,6 +100,7 @@ func (r *RevenueCatService) GetOverview(ctx context.Context) (*RevenueStats, err
 
 	req.Header.Set("Authorization", "Bearer "+r.apiKey)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 
 	resp, err := r.client.Do(req)
 	if err != nil {
@@ -125,25 +126,19 @@ func (r *RevenueCatService) GetOverview(ctx context.Context) (*RevenueStats, err
 		LastUpdated: time.Now().UTC().Format(time.RFC3339),
 	}
 
-	if metrics, ok := result["metrics"].([]interface{}); ok {
-		for _, m := range metrics {
-			metric, ok := m.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			name, _ := metric["name"].(string)
-			value, _ := metric["value"].(float64)
-
-			switch name {
-			case "revenue":
-				stats.Revenue = value
-			case "active_subscriptions":
-				stats.ActiveSubs = int(value)
-			case "mrr":
-				stats.MRR = value
-			case "active_trials":
-				stats.TrialCount = int(value)
-			}
+	// RevenueCat v2 /overview returns metrics as an object, not an array
+	if metrics, ok := result["metrics"].(map[string]interface{}); ok {
+		if v, ok := metrics["mrr"].(float64); ok {
+			stats.MRR = v
+		}
+		if v, ok := metrics["revenue"].(float64); ok {
+			stats.Revenue = v
+		}
+		if v, ok := metrics["active_subscriptions"].(float64); ok {
+			stats.ActiveSubs = int(v)
+		}
+		if v, ok := metrics["active_trials"].(float64); ok {
+			stats.TrialCount = int(v)
 		}
 	}
 
