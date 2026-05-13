@@ -380,6 +380,12 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 	if search != "" {
 		query = query.Where("email LIKE ? OR name LIKE ? OR firebase_uid LIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
+	isPro := c.Query("is_pro")
+	if isPro == "true" {
+		query = query.Where("is_pro = ?", true)
+	} else if isPro == "false" {
+		query = query.Where("is_pro = ?", false)
+	}
 	query.Count(&total)
 	query.Order("created_at desc").Offset(offset).Limit(limit).Find(&users)
 
