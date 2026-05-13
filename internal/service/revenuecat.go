@@ -150,7 +150,7 @@ func (r *RevenueCatService) GetOverview(ctx context.Context) (*RevenueStats, err
 		return 0
 	}
 
-	// Try metrics as object first
+	// Try metrics as object first (direct key-value format)
 	if metrics, ok := result["metrics"].(map[string]interface{}); ok {
 		stats.MRR = readNumber(metrics["mrr"])
 		stats.Revenue = readNumber(metrics["revenue"])
@@ -172,7 +172,7 @@ func (r *RevenueCatService) GetOverview(ctx context.Context) (*RevenueStats, err
 		stats.TrialCount = int(readNumber(result["active_trials"]))
 	}
 
-	// Try metrics as array (older v2 format or different endpoint)
+	// Try metrics as array (RevenueCat v2 /metrics/overview format uses "id" not "name")
 	if stats.MRR == 0 && stats.Revenue == 0 && stats.ActiveSubs == 0 {
 		if metricsArr, ok := result["metrics"].([]interface{}); ok {
 			for _, m := range metricsArr {
@@ -180,9 +180,10 @@ func (r *RevenueCatService) GetOverview(ctx context.Context) (*RevenueStats, err
 				if !ok {
 					continue
 				}
-				name, _ := metric["name"].(string)
+				// RevenueCat v2 uses "id" field (e.g. "id": "mrr") not "name"
+				id, _ := metric["id"].(string)
 				value := readNumber(metric["value"])
-				switch name {
+				switch id {
 				case "revenue":
 					stats.Revenue = value
 				case "active_subscriptions":
