@@ -184,7 +184,9 @@ func Setup(
 	admin.Delete("/reviews/:id", contentHandler.AdminDeleteReview)
 
 	admin.Post("/translate", contentHandler.AdminTranslate)
+	admin.Post("/translate-all", contentHandler.AdminTranslateAll)
 	admin.Get("/translations", contentHandler.AdminGetTranslations)
+	admin.Put("/translations", contentHandler.AdminSetTranslation)
 
 	admin.Post("/upload-media", contentHandler.AdminUploadMedia)
 

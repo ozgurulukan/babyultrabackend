@@ -1038,6 +1038,235 @@ func (h *ContentHandler) AdminGetTranslations(c *fiber.Ctx) error {
 	})
 }
 
+// PUT /api/admin/translations — manually set a translation for a specific entity/field/language
+func (h *ContentHandler) AdminSetTranslation(c *fiber.Ctx) error {
+	var req struct {
+		EntityType string `json:"entity_type"`
+		EntityID   uint   `json:"entity_id"`
+		Field      string `json:"field"`
+		Language   string `json:"language"`
+		Value      string `json:"value"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body")
+	}
+	if req.EntityType == "" || req.EntityID == 0 || req.Field == "" || req.Language == "" {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "entity_type, entity_id, field, and language are required")
+	}
+
+	db := database.GetDB()
+	var existing model.Translation
+	result := db.Where("entity_type = ? AND entity_id = ? AND field = ? AND language = ?",
+		req.EntityType, req.EntityID, req.Field, req.Language).First(&existing)
+
+	if result.Error != nil {
+		t := model.Translation{
+			EntityType: req.EntityType, EntityID: req.EntityID,
+			Field: req.Field, Language: req.Language, Value: req.Value,
+		}
+		db.Create(&t)
+		return model.SuccessResponse(c, t)
+	}
+
+	db.Model(&existing).Update("value", req.Value)
+	existing.Value = req.Value
+	return model.SuccessResponse(c, existing)
+}
+
+// POST /api/admin/translate-all — translate ALL missing translations for all entities in one click
+func (h *ContentHandler) AdminTranslateAll(c *fiber.Ctx) error {
+	if !h.translate.IsReady() {
+		return model.ErrorResponse(c, fiber.StatusServiceUnavailable, "translation service not configured (DEEPSEEK_KEY required)")
+	}
+
+	var req struct {
+		SourceLang string `json:"source_lang"`
+		EntityType string `json:"entity_type"` // optional: filter to specific type
+	}
+	if err := c.BodyParser(&req); err != nil {
+		req.SourceLang = "en"
+	}
+	if req.SourceLang == "" {
+		req.SourceLang = "en"
+	}
+
+	db := database.GetDB()
+
+	type entityEntry struct {
+		entityType string
+		entityID   uint
+		fields     map[string]string // field -> source text
+	}
+
+	var entries []entityEntry
+
+	// Collect all entities that need translation
+	shouldProcess := func(t string) bool {
+		return req.EntityType == "" || req.EntityType == t
+	}
+
+	if shouldProcess("template") {
+		var templates []model.Template
+		db.Where("is_active = ?", true).Find(&templates)
+		for _, t := range templates {
+			fields := map[string]string{}
+			if t.Name != "" {
+				fields["name"] = t.Name
+			}
+			if t.Description != "" {
+				fields["description"] = t.Description
+			}
+			if len(fields) > 0 {
+				entries = append(entries, entityEntry{"template", t.ID, fields})
+			}
+		}
+	}
+
+	if shouldProcess("category") {
+		var categories []model.Category
+		db.Where("is_active = ?", true).Find(&categories)
+		for _, cat := range categories {
+			fields := map[string]string{}
+			if cat.Name != "" {
+				fields["name"] = cat.Name
+			}
+			if cat.Description != "" {
+				fields["description"] = cat.Description
+			}
+			if len(fields) > 0 {
+				entries = append(entries, entityEntry{"category", cat.ID, fields})
+			}
+		}
+	}
+
+	if shouldProcess("slider") {
+		var sliders []model.SliderItem
+		db.Where("is_active = ?", true).Find(&sliders)
+		for _, s := range sliders {
+			fields := map[string]string{}
+			if s.Title != "" {
+				fields["title"] = s.Title
+			}
+			if s.Description != "" {
+				fields["description"] = s.Description
+			}
+			if len(fields) > 0 {
+				entries = append(entries, entityEntry{"slider", s.ID, fields})
+			}
+		}
+	}
+
+	if shouldProcess("onboarding") {
+		var media []model.OnboardingMedia
+		db.Where("is_active = ?", true).Find(&media)
+		for _, o := range media {
+			fields := map[string]string{}
+			if o.Title != "" {
+				fields["title"] = o.Title
+			}
+			if o.Description != "" {
+				fields["description"] = o.Description
+			}
+			if len(fields) > 0 {
+				entries = append(entries, entityEntry{"onboarding", o.ID, fields})
+			}
+		}
+	}
+
+	if shouldProcess("review") {
+		var reviews []model.OnboardingReview
+		db.Where("is_active = ?", true).Find(&reviews)
+		for _, r := range reviews {
+			fields := map[string]string{}
+			if r.Review != "" {
+				fields["review"] = r.Review
+			}
+			if len(fields) > 0 {
+				entries = append(entries, entityEntry{"review", r.ID, fields})
+			}
+		}
+	}
+
+	// Load existing translations to find what's missing
+	var allTranslations []model.Translation
+	db.Find(&allTranslations)
+
+	existingSet := make(map[string]bool)
+	for _, t := range allTranslations {
+		key := fmt.Sprintf("%s:%d:%s:%s", t.EntityType, t.EntityID, t.Field, t.Language)
+		existingSet[key] = true
+	}
+
+	// Determine target languages
+	targetLangs := make([]string, 0)
+	for _, lang := range service.SupportedLanguages {
+		if lang != req.SourceLang {
+			targetLangs = append(targetLangs, lang)
+		}
+	}
+
+	totalTranslated := 0
+	totalSkipped := 0
+	var errors []string
+
+	for _, entry := range entries {
+		for field, text := range entry.fields {
+			// Find which languages are missing for this entity/field
+			missingLangs := make([]string, 0)
+			for _, lang := range targetLangs {
+				key := fmt.Sprintf("%s:%d:%s:%s", entry.entityType, entry.entityID, field, lang)
+				if !existingSet[key] {
+					missingLangs = append(missingLangs, lang)
+				}
+			}
+
+			if len(missingLangs) == 0 {
+				totalSkipped++
+				continue
+			}
+
+			// Translate to missing languages
+			translations, err := h.translate.TranslateToAll(c.Context(), text, req.SourceLang, missingLangs)
+			if err != nil {
+				errors = append(errors, fmt.Sprintf("%s:%d:%s - %s", entry.entityType, entry.entityID, field, err.Error()))
+				continue
+			}
+
+			// Save translations
+			for lang, value := range translations {
+				if value == "" {
+					continue
+				}
+				var existing model.Translation
+				result := db.Where("entity_type = ? AND entity_id = ? AND field = ? AND language = ?",
+					entry.entityType, entry.entityID, field, lang).First(&existing)
+
+				if result.Error != nil {
+					db.Create(&model.Translation{
+						EntityType: entry.entityType, EntityID: entry.entityID,
+						Field: field, Language: lang, Value: value,
+					})
+				} else {
+					db.Model(&existing).Update("value", value)
+				}
+				totalTranslated++
+			}
+		}
+	}
+
+	response := fiber.Map{
+		"total_entities":   len(entries),
+		"total_translated": totalTranslated,
+		"total_skipped":    totalSkipped,
+		"target_languages": len(targetLangs),
+	}
+	if len(errors) > 0 {
+		response["errors"] = errors
+	}
+
+	return model.SuccessResponse(c, response)
+}
+
 // ─── Translation helpers for mobile API ─────────────────────
 
 func (h *ContentHandler) applyTranslations(items interface{}, entityType, lang string) {

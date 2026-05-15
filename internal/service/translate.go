@@ -12,15 +12,45 @@ import (
 )
 
 var SupportedLanguages = []string{
-	"en", "tr", "de", "fr", "es", "pt", "it",
-	"ja", "ko", "zh", "ar", "ru", "hi", "nl", "sv", "pl",
+	"en", "tr", "ar", "cs", "da", "de", "el", "es", "fi", "fil",
+	"fr", "he", "hr", "hu", "id", "it", "ja", "ko", "ms", "nl",
+	"nb", "pl", "pt", "ro", "ru", "sk", "sv", "th", "uk", "vi",
+	"zh", "zh-Hant",
 }
 
 var LanguageNames = map[string]string{
-	"en": "English", "tr": "Türkçe", "de": "Deutsch", "fr": "Français",
-	"es": "Español", "pt": "Português", "it": "Italiano", "ja": "日本語",
-	"ko": "한국어", "zh": "中文", "ar": "العربية", "ru": "Русский",
-	"hi": "हिन्दी", "nl": "Nederlands", "sv": "Svenska", "pl": "Polski",
+	"en":      "English",
+	"tr":      "Türkçe",
+	"ar":      "العربية",
+	"cs":      "Čeština",
+	"da":      "Dansk",
+	"de":      "Deutsch",
+	"el":      "Ελληνικά",
+	"es":      "Español",
+	"fi":      "Suomi",
+	"fil":     "Filipino",
+	"fr":      "Français",
+	"he":      "עברית",
+	"hr":      "Hrvatski",
+	"hu":      "Magyar",
+	"id":      "Bahasa Indonesia",
+	"it":      "Italiano",
+	"ja":      "日本語",
+	"ko":      "한국어",
+	"ms":      "Bahasa Melayu",
+	"nl":      "Nederlands",
+	"nb":      "Norsk Bokmål",
+	"pl":      "Polski",
+	"pt":      "Português",
+	"ro":      "Română",
+	"ru":      "Русский",
+	"sk":      "Slovenčina",
+	"sv":      "Svenska",
+	"th":      "ไทย",
+	"uk":      "Українська",
+	"vi":      "Tiếng Việt",
+	"zh":      "简体中文",
+	"zh-Hant": "繁體中文",
 }
 
 type TranslateService struct {

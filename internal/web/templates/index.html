@@ -830,6 +830,29 @@
                                     <span class="text-sm">Trending</span></label></div>
                             </div>
                         </div>
+                        <!-- Translate Button -->
+                        <div x-show="categoryForm?.id" class="mt-5">
+                            <button type="button" x-ref="translateBtnCategory"
+                                @click="
+                                    let btn = $refs.translateBtnCategory;
+                                    btn.disabled = true;
+                                    btn.textContent = '🤖 Translating...';
+                                    fetch('/api/admin/translate', {
+                                        method: 'POST',
+                                        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ entity_type: 'category', entity_id: categoryForm.id, source_lang: 'en' })
+                                    })
+                                    .then(r => r.json())
+                                    .then(d => { btn.textContent = d.success ? '✅ ' + (d.data?.total_saved || 0) + ' translations saved!' : '❌ ' + (d.error || 'Failed'); })
+                                    .catch(e => { btn.textContent = '❌ Error: ' + e.message; })
+                                    .finally(() => { setTimeout(() => { btn.disabled = false; btn.textContent = '🤖 Translate to All Languages (AI)'; }, 3000); });
+                                "
+                                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50">
+                                🤖 Translate to All Languages (AI)
+                            </button>
+                            <p class="text-[10px] text-gray-500 mt-1 text-center">Translates name &amp; description to all 31 supported languages using AI and saves automatically.</p>
+                        </div>
+
                         <div class="mt-6 flex justify-end gap-3">
                             <button @click="categoryForm = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
                             <button @click="saveCategory()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
@@ -1166,6 +1189,29 @@
                             </div>
                         </div>
 
+                        <!-- Translate Button -->
+                        <div x-show="templateForm?.id" class="mt-5">
+                            <button type="button" x-ref="translateBtnTemplate"
+                                @click="
+                                    let btn = $refs.translateBtnTemplate;
+                                    btn.disabled = true;
+                                    btn.textContent = '🤖 Translating...';
+                                    fetch('/api/admin/translate', {
+                                        method: 'POST',
+                                        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ entity_type: 'template', entity_id: templateForm.id, source_lang: 'en' })
+                                    })
+                                    .then(r => r.json())
+                                    .then(d => { btn.textContent = d.success ? '✅ ' + (d.data?.total_saved || 0) + ' translations saved!' : '❌ ' + (d.error || 'Failed'); })
+                                    .catch(e => { btn.textContent = '❌ Error: ' + e.message; })
+                                    .finally(() => { setTimeout(() => { btn.disabled = false; btn.textContent = '🤖 Translate to All Languages (AI)'; }, 3000); });
+                                "
+                                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50">
+                                🤖 Translate to All Languages (AI)
+                            </button>
+                            <p class="text-[10px] text-gray-500 mt-1 text-center">Translates name &amp; description to all 31 supported languages using AI and saves automatically.</p>
+                        </div>
+
                         <div class="mt-6 flex justify-end gap-3">
                             <button @click="templateForm = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
                             <button @click="saveTemplate()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
@@ -1412,6 +1458,29 @@
                                     <span class="text-sm">Active</span></label></div>
                             </div>
                         </div>
+                        <!-- Translate Button -->
+                        <div x-show="sliderForm?.id" class="mt-5">
+                            <button type="button" x-ref="translateBtnSlider"
+                                @click="
+                                    let btn = $refs.translateBtnSlider;
+                                    btn.disabled = true;
+                                    btn.textContent = '🤖 Translating...';
+                                    fetch('/api/admin/translate', {
+                                        method: 'POST',
+                                        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ entity_type: 'slider', entity_id: sliderForm.id, source_lang: 'en' })
+                                    })
+                                    .then(r => r.json())
+                                    .then(d => { btn.textContent = d.success ? '✅ ' + (d.data?.total_saved || 0) + ' translations saved!' : '❌ ' + (d.error || 'Failed'); })
+                                    .catch(e => { btn.textContent = '❌ Error: ' + e.message; })
+                                    .finally(() => { setTimeout(() => { btn.disabled = false; btn.textContent = '🤖 Translate to All Languages (AI)'; }, 3000); });
+                                "
+                                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50">
+                                🤖 Translate to All Languages (AI)
+                            </button>
+                            <p class="text-[10px] text-gray-500 mt-1 text-center">Translates title &amp; description to all 31 supported languages using AI and saves automatically.</p>
+                        </div>
+
                         <div class="mt-6 flex justify-end gap-3">
                             <button @click="sliderForm = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
                             <button @click="saveSlider()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
@@ -1526,6 +1595,29 @@
                             </div>
                         </div>
 
+                        <!-- Translate Button -->
+                        <div x-show="onboardingForm?.id" class="mt-5">
+                            <button type="button" x-ref="translateBtnOnboarding"
+                                @click="
+                                    let btn = $refs.translateBtnOnboarding;
+                                    btn.disabled = true;
+                                    btn.textContent = '🤖 Translating...';
+                                    fetch('/api/admin/translate', {
+                                        method: 'POST',
+                                        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ entity_type: 'onboarding', entity_id: onboardingForm.id, source_lang: 'en' })
+                                    })
+                                    .then(r => r.json())
+                                    .then(d => { btn.textContent = d.success ? '✅ ' + (d.data?.total_saved || 0) + ' translations saved!' : '❌ ' + (d.error || 'Failed'); })
+                                    .catch(e => { btn.textContent = '❌ Error: ' + e.message; })
+                                    .finally(() => { setTimeout(() => { btn.disabled = false; btn.textContent = '🤖 Translate to All Languages (AI)'; }, 3000); });
+                                "
+                                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50">
+                                🤖 Translate to All Languages (AI)
+                            </button>
+                            <p class="text-[10px] text-gray-500 mt-1 text-center">Translates title &amp; description to all 31 supported languages using AI and saves automatically.</p>
+                        </div>
+
                         <div class="mt-6 flex justify-end gap-3">
                             <button @click="onboardingForm = null" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition">Cancel</button>
                             <button @click="saveOnboarding()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 rounded-lg text-sm font-medium transition">Save</button>
@@ -1631,6 +1723,29 @@
                                     </label>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Translate Button -->
+                        <div x-show="reviewForm?.id" class="mt-5">
+                            <button type="button" x-ref="translateBtnReview"
+                                @click="
+                                    let btn = $refs.translateBtnReview;
+                                    btn.disabled = true;
+                                    btn.textContent = '🤖 Translating...';
+                                    fetch('/api/admin/translate', {
+                                        method: 'POST',
+                                        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ entity_type: 'review', entity_id: reviewForm.id, source_lang: 'en' })
+                                    })
+                                    .then(r => r.json())
+                                    .then(d => { btn.textContent = d.success ? '✅ ' + (d.data?.total_saved || 0) + ' translations saved!' : '❌ ' + (d.error || 'Failed'); })
+                                    .catch(e => { btn.textContent = '❌ Error: ' + e.message; })
+                                    .finally(() => { setTimeout(() => { btn.disabled = false; btn.textContent = '🤖 Translate to All Languages (AI)'; }, 3000); });
+                                "
+                                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50">
+                                🤖 Translate to All Languages (AI)
+                            </button>
+                            <p class="text-[10px] text-gray-500 mt-1 text-center">Translates review text to all 31 supported languages using AI and saves automatically.</p>
                         </div>
 
                         <div class="mt-6 flex justify-end gap-3">
