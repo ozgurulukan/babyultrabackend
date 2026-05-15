@@ -417,6 +417,29 @@ func (h *ContentHandler) AdminDeleteSlider(c *fiber.Ctx) error {
 	return model.SuccessResponse(c, fiber.Map{"deleted": true})
 }
 
+// POST /api/admin/slider/reorder
+func (h *ContentHandler) AdminReorderSlider(c *fiber.Ctx) error {
+	type reorderItem struct {
+		ID        uint `json:"id"`
+		SortOrder int  `json:"sort_order"`
+	}
+	var body struct {
+		Items []reorderItem `json:"items"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body")
+	}
+
+	db := database.GetDB()
+	for _, item := range body.Items {
+		if item.ID == 0 {
+			continue
+		}
+		db.Model(&model.SliderItem{}).Where("id = ?", item.ID).Update("sort_order", item.SortOrder)
+	}
+	return model.SuccessResponse(c, fiber.Map{"reordered": true})
+}
+
 // ── Quick Buttons ──
 
 // GET /api/admin/quick-buttons
@@ -632,6 +655,29 @@ func (h *ContentHandler) AdminDeleteTemplate(c *fiber.Ctx) error {
 	}
 
 	return model.SuccessResponse(c, fiber.Map{"deleted": true})
+}
+
+// POST /api/admin/templates/reorder
+func (h *ContentHandler) AdminReorderTemplates(c *fiber.Ctx) error {
+	type reorderItem struct {
+		ID        uint `json:"id"`
+		SortOrder int  `json:"sort_order"`
+	}
+	var body struct {
+		Items []reorderItem `json:"items"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body")
+	}
+
+	db := database.GetDB()
+	for _, item := range body.Items {
+		if item.ID == 0 {
+			continue
+		}
+		db.Model(&model.Template{}).Where("id = ?", item.ID).Update("sort_order", item.SortOrder)
+	}
+	return model.SuccessResponse(c, fiber.Map{"reordered": true})
 }
 
 // GET /api/admin/onboarding?app_id=xxx

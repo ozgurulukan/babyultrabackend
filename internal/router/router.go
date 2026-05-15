@@ -160,11 +160,13 @@ func Setup(
 	admin.Post("/templates", contentHandler.AdminCreateTemplate)
 	admin.Put("/templates/:id", contentHandler.AdminUpdateTemplate)
 	admin.Delete("/templates/:id", contentHandler.AdminDeleteTemplate)
+	admin.Post("/templates/reorder", contentHandler.AdminReorderTemplates)
 
 	admin.Get("/slider", contentHandler.AdminListSlider)
 	admin.Post("/slider", contentHandler.AdminCreateSlider)
 	admin.Put("/slider/:id", contentHandler.AdminUpdateSlider)
 	admin.Delete("/slider/:id", contentHandler.AdminDeleteSlider)
+	admin.Post("/slider/reorder", contentHandler.AdminReorderSlider)
 
 	admin.Get("/quick-buttons", contentHandler.AdminListQuickButtons)
 	admin.Post("/quick-buttons", contentHandler.AdminCreateQuickButton)

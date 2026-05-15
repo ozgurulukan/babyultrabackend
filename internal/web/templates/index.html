@@ -230,7 +230,7 @@
                             <option value="free">Free Only</option>
                         </select>
                         <input x-model="usersMeta.search" @keyup.enter="searchUsers()" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none w-full md:w-64" placeholder="E-posta, isim veya UID ara...">
-                        <button @click="searchUsers()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition">Ara</button>
+                        <button @click="searchUsers()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition">Search</button>
                     </div>
                 </div>
                 <p class="text-sm text-gray-500 mb-6">View users, edit credits, and manage Pro/subscription status.</p>
@@ -248,7 +248,7 @@
                         </div>
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-xs text-gray-400 mb-1">Kredi</label>
+                                <label class="block text-xs text-gray-400 mb-1">Credits</label>
                                 <input x-model.number="editingUser.credits" type="number" min="0" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
                             </div>
                             <div class="flex items-center gap-6">
@@ -661,7 +661,7 @@
                         <h1 class="text-2xl font-bold">Request logs</h1>
                         <button x-show="selectedLogIds.length" @click="deleteSelectedLogs()" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            <span x-text="'Sil (' + selectedLogIds.length + ')'"></span>
+                            <span x-text="'Delete (' + selectedLogIds.length + ')'"></span>
                         </button>
                     </div>
                     <button @click="fetchLogs()" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition">
@@ -878,10 +878,16 @@
             <div x-show="tab === 'templates'" class="fade-in">
                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                     <h1 class="text-2xl font-bold">Template management</h1>
-                    <button @click="openNewTemplate()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        Yeni Template
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button @click="reorderTemplates()" class="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            Re-Order
+                        </button>
+                        <button @click="openNewTemplate()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            New Template
+                        </button>
+                    </div>
                 </div>
                 <!-- Template Type Tabs -->
                 <div class="flex flex-wrap bg-gray-900 border border-gray-800 rounded-xl p-1 mb-6">
@@ -936,7 +942,7 @@
                                 <input x-model="templateForm.app_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="default">
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-400 mb-1">Aksiyon Tipi</label>
+                                <label class="block text-xs text-gray-400 mb-1">Action Type</label>
                                 <select x-model="templateForm.action_type" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
                                     <template x-for="at in actionTypes" :key="at.value">
                                         <option :value="at.value" x-text="at.label"></option>
@@ -944,9 +950,9 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-400 mb-1">Kategori</label>
+                                <label class="block text-xs text-gray-400 mb-1">Category</label>
                                 <select x-model.number="templateForm.category_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
-                                    <option value="0">— Kategorisiz —</option>
+                                    <option value="0">— Uncategorized —</option>
                                     <template x-for="cat in getCategoriesForType(templateTypeTab)" :key="cat.id">
                                         <option :value="cat.id" x-text="cat.name"></option>
                                     </template>
@@ -1051,7 +1057,7 @@
                                     </button>
                                 </div>
                                 <select x-model="templateForm.before_media_type" class="mt-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs focus:border-brand-500 focus:outline-none">
-                                    <option value="image">Resim</option><option value="video">Video</option>
+                                    <option value="image">Image</option><option value="video">Video</option>
                                 </select>
                                 <img x-show="templateForm.before_media_url && templateForm.before_media_type==='image'" :src="templateForm.before_media_url" class="mt-2 h-20 rounded-lg object-cover">
                                 <video x-show="templateForm.before_media_url && templateForm.before_media_type==='video'" :src="templateForm.before_media_url" class="mt-2 h-20 rounded-lg" muted playsinline></video>
@@ -1065,7 +1071,7 @@
                                     </button>
                                 </div>
                                 <select x-model="templateForm.after_media_type" class="mt-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs focus:border-brand-500 focus:outline-none">
-                                    <option value="image">Resim</option><option value="video">Video</option>
+                                    <option value="image">Image</option><option value="video">Video</option>
                                 </select>
                                 <img x-show="templateForm.after_media_url && templateForm.after_media_type==='image'" :src="templateForm.after_media_url" class="mt-2 h-20 rounded-lg object-cover">
                                 <video x-show="templateForm.after_media_url && templateForm.after_media_type==='video'" :src="templateForm.after_media_url" class="mt-2 h-20 rounded-lg" muted playsinline></video>
@@ -1083,7 +1089,7 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-400 mb-1">Kredi Maliyeti</label>
+                                <label class="block text-xs text-gray-400 mb-1">Credit Cost</label>
                                 <input x-model.number="templateForm.credit_cost" type="number" min="0" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
                             </div>
                             <div x-show="templateTypeTab === 'other'" class="flex items-end pb-1">
@@ -1202,11 +1208,11 @@
                                         <p class="text-sm text-gray-400 mt-0.5" x-text="t.description || t.prompt.substring(0, 80) + '...'"></p>
                                         <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
                                             <span x-text="'Provider: ' + (t.provider || '—')"></span>
-                                            <span x-show="t.category_id" x-text="'Kategori: ' + (allCategories.find(c=>c.id===t.category_id)?.name || t.category_id)"></span>
+                                            <span x-show="t.category_id" x-text="'Category: ' + (allCategories.find(c=>c.id===t.category_id)?.name || t.category_id)"></span>
                                             <span x-text="'Slug: ' + t.slug" class="text-gray-600"></span>
                                             <span x-text="'App ID: ' + (t.app_id || '—')"></span>
                                             <span x-text="'Model: ' + (t.model || '—')"></span>
-                                            <span x-text="'Kredi: ' + (t.credit_cost || 0)"></span>
+                                            <span x-text="'Credits: ' + (t.credit_cost || 0)"></span>
                                         </div>
                                         <div x-show="t.require_mom_photo || t.require_baby_photo || t.require_dad_photo" class="flex items-center gap-2 mt-1">
                                             <span x-show="t.require_mom_photo" class="px-1.5 py-0.5 bg-pink-500/10 text-pink-400 rounded text-[10px] font-medium">Mom</span>
@@ -1236,10 +1242,16 @@
             <div x-show="tab === 'slider'" class="fade-in">
                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                     <h1 class="text-2xl font-bold">Slider management</h1>
-                    <button @click="openNewSlider()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        Yeni Slider
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button @click="reorderSlider()" class="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            Re-Order
+                        </button>
+                        <button @click="openNewSlider()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            New Slider
+                        </button>
+                    </div>
                 </div>
                 <p class="text-sm text-gray-500 mb-6">Manage the app’s main slider. You can highlight templates or add special-day frames (PNG overlays) with optional date ranges.</p>
 
@@ -1447,10 +1459,10 @@
             <!-- Onboarding Tab -->
             <div x-show="tab === 'onboarding'" class="fade-in">
                 <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-                    <h1 class="text-2xl font-bold">Onboarding Medya</h1>
+                    <h1 class="text-2xl font-bold">Onboarding Media</h1>
                     <button @click="openNewOnboarding()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        Yeni Medya
+                        New Media
                     </button>
                 </div>
                 <p class="text-sm text-gray-500 mb-6">Manage the media shown in the app onboarding screens.</p>
@@ -1467,7 +1479,7 @@
                                     <input x-model="onboardingForm.app_id" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="default">
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-gray-400 mb-1">Tip</label>
+                                    <label class="block text-xs text-gray-400 mb-1">Type</label>
                                     <select x-model="onboardingForm.type" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
                                         <option value="video">Video</option>
                                         <option value="image">Image</option>
@@ -1480,7 +1492,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1">Description</label>
-                                <input x-model="onboardingForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Bu uygulama ile...">
+                                <input x-model="onboardingForm.description" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="With this app...">
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1">Medya URL *</label>
@@ -1494,7 +1506,7 @@
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1">Thumbnail URL</label>
                                 <div class="flex gap-2">
-                                    <input x-model="onboardingForm.thumbnail_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Opsiyonel">
+                                    <input x-model="onboardingForm.thumbnail_url" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Optional">
                                     <button @click="uploadOnboardingMedia('thumbnail_url')" :disabled="onboardingUploading" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs transition disabled:opacity-50">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                                     </button>
@@ -1569,7 +1581,7 @@
                     <h1 class="text-2xl font-bold">User reviews</h1>
                     <button @click="openNewReview()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        Yeni Yorum
+                        New Review
                     </button>
                 </div>
                 <p class="text-sm text-gray-500 mb-6">Manage App Store–style reviews shown during onboarding.</p>
@@ -2004,7 +2016,7 @@
                             <label class="block text-xs text-gray-400 mb-1">Body</label>
                             <textarea x-model="notifForm.body" maxlength="200" rows="3"
                                 class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none resize-none"
-                                placeholder="Yeni template'i denemek icin uygulamayi ac."></textarea>
+                                placeholder="Open the app to try the new template."></textarea>
                             <p class="text-[10px] text-gray-500 mt-1"><span x-text="notifForm.body.length"></span>/200</p>
                         </div>
 
@@ -2388,14 +2400,14 @@
             notifSending: false,
 
             playgroundModes: [
-                { value: 'text_to_text', label: 'Metin → Metin', icon: '💬', needsInput: false },
+                { value: 'text_to_text', label: 'Text → Text', icon: '💬', needsInput: false },
                 { value: 'text_to_image', label: 'Text → Image', icon: '🎨', needsInput: false },
-                { value: 'text_to_audio', label: 'Metin → Ses', icon: '🔊', needsInput: false },
+                { value: 'text_to_audio', label: 'Text → Audio', icon: '🔊', needsInput: false },
                 { value: 'image_to_image', label: 'Image → Image', icon: '🖼️', needsInput: true },
                 { value: 'image_to_text', label: 'Image → Text', icon: '📝', needsInput: true },
                 { value: 'image_to_video', label: 'Image → Video', icon: '🎬', needsInput: true },
                 { value: 'video_to_video', label: 'Video → Video', icon: '🎥', needsInput: true },
-                { value: 'audio_to_text', label: 'Ses → Metin', icon: '🎙️', needsInput: true }
+                { value: 'audio_to_text', label: 'Audio → Text', icon: '🎙️', needsInput: true }
             ],
 
             pgTypeTab: 'photo',
@@ -2703,7 +2715,7 @@
                 } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
             },
             async deleteCategory(id) {
-                if (!confirm('Bu kategori silinecek. Emin misiniz?')) return;
+                if (!confirm('This category will be deleted. Are you sure?')) return;
                 try { await this.api('/api/admin/categories/' + id, { method:'DELETE' }); this.fetchCategories(); this.showToast('Deleted'); }
                 catch(e) { this.showToast('Delete failed: ' + e.message, 'error'); }
             },
@@ -2727,11 +2739,28 @@
             // ─── Slider Methods ─────────────────────────
             async fetchSlider() {
                 try {
+                    this.loading.slider = true;
                     const data = await this.api('/api/admin/slider?type=' + (this.sliderTypeTab || 'photo'));
                     const items = data.slider || [];
-                    items.forEach(s => { if (!s.type) s.type = 'photo'; });
+                    items.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
                     this.sliderItems = items;
                 } catch(e) { this.showToast('Failed to load slider', 'error'); }
+            },
+
+            async reorderSlider() {
+                if (!this.sliderItems.length) return;
+                if (!confirm('Randomly reorder slider items in this tab?')) return;
+                const items = [...this.sliderItems];
+                for (let i = items.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [items[i], items[j]] = [items[j], items[i]];
+                }
+                const payload = items.map((s, idx) => ({ id: s.id, sort_order: idx + 1 }));
+                try {
+                    await this.api('/api/admin/slider/reorder', { method: 'POST', body: JSON.stringify({ items: payload }) });
+                    this.showToast('Slider reordered');
+                    this.fetchSlider();
+                } catch(e) { this.showToast('Failed to reorder: ' + e.message, 'error'); }
             },
             async fetchSliderTemplates(type) {
                 try {
@@ -2758,7 +2787,7 @@
                 } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
             },
             async deleteSlider(id) {
-                if (!confirm('Silinecek. Emin misiniz?')) return;
+                if (!confirm('This will be deleted. Are you sure?')) return;
                 try { await this.api('/api/admin/slider/' + id, { method:'DELETE' }); this.fetchSlider(); this.showToast('Deleted'); }
                 catch(e) { this.showToast('Delete failed', 'error'); }
             },
@@ -2883,6 +2912,22 @@
                     const data = await this.api('/api/admin/templates?type=' + encodeURIComponent(type));
                     this.templates = data.templates || [];
                 } catch(e) { this.showToast('Failed to load templates', 'error'); }
+            },
+
+            async reorderTemplates() {
+                if (!this.templates.length) return;
+                if (!confirm('Randomly reorder templates in this tab?')) return;
+                const items = [...this.templates];
+                for (let i = items.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [items[i], items[j]] = [items[j], items[i]];
+                }
+                const payload = items.map((t, idx) => ({ id: t.id, sort_order: idx + 1 }));
+                try {
+                    await this.api('/api/admin/templates/reorder', { method: 'POST', body: JSON.stringify({ items: payload }) });
+                    this.showToast('Templates reordered');
+                    this.fetchTemplates();
+                } catch(e) { this.showToast('Failed to reorder: ' + e.message, 'error'); }
             },
 
             setTemplateType(t) { this.templateTypeTab = t; this.fetchTemplates(); },
@@ -3073,7 +3118,7 @@
             },
 
             async deleteReview(id) {
-                if (!confirm('Bu yorum silinecek. Emin misiniz?')) return;
+                if (!confirm('This review will be deleted. Are you sure?')) return;
                 try {
                     await this.api('/api/admin/reviews/' + id, { method:'DELETE' });
                     this.showToast('Deleted');
@@ -3152,7 +3197,7 @@
                 } catch(e) { this.showToast('Error: ' + e.message, 'error'); }
             },
             async deleteUser(u) {
-                if (!confirm('Kullanıcı silinecek. Emin misiniz?')) return;
+                if (!confirm('This user will be deleted. Are you sure?')) return;
                 try {
                     await this.api('/api/admin/users/' + u.id, { method: 'DELETE' });
                     this.fetchUsers();
