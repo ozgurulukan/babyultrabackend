@@ -157,6 +157,8 @@ func (h *NotificationHandler) AdminTokenStats(c *fiber.Ctx) error {
 // {
 //   "title": "Yeni template!",
 //   "body":  "Birlikte deneyelim",
+//   "title_translations": {"tr": "Yeni şablon!", "de": "Neue Vorlage!"},
+//   "body_translations":  {"tr": "Birlikte deneyelim", "de": "Lass uns zusammen ausprobieren"},
 //   "platform": "ios",             // ios | android | all (default: all)
 //   "app_id":   "default",         // optional, filters by app_id
 //   "deep_link": "luris://home",   // optional, added to data payload
@@ -169,13 +171,15 @@ func (h *NotificationHandler) AdminSendNotification(c *fiber.Ctx) error {
 	}
 
 	var req struct {
-		Title      string            `json:"title"`
-		Body       string            `json:"body"`
-		Platform   string            `json:"platform"`
-		AppID      string            `json:"app_id"`
-		DeepLink   string            `json:"deep_link"`
-		TargetUIDs []string          `json:"target_uids"`
-		Data       map[string]string `json:"data"`
+		Title             string            `json:"title"`
+		Body              string            `json:"body"`
+		TitleTranslations map[string]string `json:"title_translations"`
+		BodyTranslations  map[string]string `json:"body_translations"`
+		Platform          string            `json:"platform"`
+		AppID             string            `json:"app_id"`
+		DeepLink          string            `json:"deep_link"`
+		TargetUIDs        []string          `json:"target_uids"`
+		Data              map[string]string `json:"data"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body")
@@ -207,16 +211,27 @@ func (h *NotificationHandler) AdminSendNotification(c *fiber.Ctx) error {
 		query = query.Where("firebase_uid IN ?", req.TargetUIDs)
 	}
 
-	var tokens []string
-	query.Distinct("token").Pluck("token", &tokens)
+	// Fetch tokens grouped by locale so we can send localized notifications
+	type tokenRow struct {
+		Token  string
+		Locale string
+	}
+	var rows []tokenRow
+	query.Select("DISTINCT token, COALESCE(NULLIF(locale, ''), 'en') as locale").Scan(&rows)
 
-	if len(tokens) == 0 {
+	if len(rows) == 0 {
 		return model.SuccessResponse(c, fiber.Map{
 			"sent":          0,
 			"failed":        0,
 			"total_targets": 0,
 			"message":       "no device tokens matched the target filter",
 		})
+	}
+
+	// Group tokens by locale
+	localeTokens := make(map[string][]string)
+	for _, r := range rows {
+		localeTokens[r.Locale] = append(localeTokens[r.Locale], r.Token)
 	}
 
 	data := map[string]string{}
@@ -227,19 +242,39 @@ func (h *NotificationHandler) AdminSendNotification(c *fiber.Ctx) error {
 		data["deep_link"] = req.DeepLink
 	}
 
-	success, failure, invalid, err := h.firebase.SendMulticast(c.Context(), tokens, req.Title, req.Body, data)
-	if err != nil {
-		return model.ErrorResponse(c, fiber.StatusInternalServerError, "failed to send notification: "+err.Error())
+	totalSuccess := 0
+	totalFailure := 0
+	var allInvalid []string
+
+	for locale, tokens := range localeTokens {
+		// Pick localized title/body if available, fallback to default English
+		title := req.Title
+		body := req.Body
+		if t, ok := req.TitleTranslations[locale]; ok && strings.TrimSpace(t) != "" {
+			title = t
+		}
+		if b, ok := req.BodyTranslations[locale]; ok && strings.TrimSpace(b) != "" {
+			body = b
+		}
+
+		success, failure, invalid, err := h.firebase.SendMulticast(c.Context(), tokens, title, body, data)
+		if err != nil {
+			log.Printf("[Notification] Failed to send to locale %s: %v", locale, err)
+		}
+		totalSuccess += success
+		totalFailure += failure
+		allInvalid = append(allInvalid, invalid...)
 	}
 
-	if len(invalid) > 0 {
-		db.Where("token IN ?", invalid).Delete(&model.DeviceToken{})
+	if len(allInvalid) > 0 {
+		db.Where("token IN ?", allInvalid).Delete(&model.DeviceToken{})
 	}
 
 	return model.SuccessResponse(c, fiber.Map{
-		"sent":            success,
-		"failed":          failure,
-		"total_targets":   len(tokens),
-		"pruned_invalid":  len(invalid),
+		"sent":            totalSuccess,
+		"failed":          totalFailure,
+		"total_targets":   len(rows),
+		"pruned_invalid":  len(allInvalid),
+		"locales":         len(localeTokens),
 	})
 }

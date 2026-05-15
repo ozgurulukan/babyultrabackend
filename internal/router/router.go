@@ -185,6 +185,7 @@ func Setup(
 
 	admin.Post("/translate", contentHandler.AdminTranslate)
 	admin.Post("/translate-all", contentHandler.AdminTranslateAll)
+	admin.Post("/translate-text", contentHandler.AdminTranslateText)
 	admin.Get("/translations", contentHandler.AdminGetTranslations)
 	admin.Put("/translations", contentHandler.AdminSetTranslation)
 

@@ -1483,3 +1483,50 @@ func isSVGData(data []byte) bool {
 	prefix := strings.ToLower(string(data[:n]))
 	return strings.Contains(prefix, "<svg")
 }
+
+// POST /api/admin/translate-text
+// Generic text translator (not tied to any entity). Returns translations for all supported languages.
+func (h *ContentHandler) AdminTranslateText(c *fiber.Ctx) error {
+	if !h.translate.IsReady() {
+		return model.ErrorResponse(c, fiber.StatusServiceUnavailable, "translation service not configured (DEEPSEEK_KEY required)")
+	}
+
+	var req struct {
+		Text       string   `json:"text"`
+		SourceLang string   `json:"source_lang"`
+		TargetLangs []string `json:"target_langs"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body")
+	}
+	req.Text = strings.TrimSpace(req.Text)
+	if req.Text == "" {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "text is required")
+	}
+	if req.SourceLang == "" {
+		req.SourceLang = "en"
+	}
+
+	targetLangs := req.TargetLangs
+	if len(targetLangs) == 0 {
+		for _, lang := range service.SupportedLanguages {
+			if lang != req.SourceLang {
+				targetLangs = append(targetLangs, lang)
+			}
+		}
+	}
+
+	translations, err := h.translate.TranslateToAll(c.Context(), req.Text, req.SourceLang, targetLangs)
+	if err != nil {
+		return model.ErrorResponse(c, fiber.StatusInternalServerError, "translation failed: "+err.Error())
+	}
+
+	translations[req.SourceLang] = req.Text
+
+	return model.SuccessResponse(c, fiber.Map{
+		"text":         req.Text,
+		"source_lang":  req.SourceLang,
+		"translations": translations,
+		"languages":    len(translations),
+	})
+}
