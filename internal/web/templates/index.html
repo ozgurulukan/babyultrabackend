@@ -229,6 +229,12 @@
                             <option value="pro">Pro Only</option>
                             <option value="free">Free Only</option>
                         </select>
+                        <select x-model="usersMeta.creditRange" @change="searchUsers()" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+                            <option value="">All Credits</option>
+                            <option value="0-50">0 - 50 Credits</option>
+                            <option value="50-100">50 - 100 Credits</option>
+                            <option value="100+">100+ Credits</option>
+                        </select>
                         <input x-model="usersMeta.search" @keyup.enter="searchUsers()" class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none w-full md:w-64" placeholder="E-posta, isim veya UID ara...">
                         <button @click="searchUsers()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition">Search</button>
                     </div>
@@ -2518,7 +2524,7 @@
             reviewUploading: false,
             translating: {},
             userList: [],
-            usersMeta: { page: 1, limit: 50, total: 0, search: '', filter: 'all' },
+            usersMeta: { page: 1, limit: 50, total: 0, search: '', filter: 'all', creditRange: '' },
             editingUser: null,
             deletionRequests: [],
             deletionMeta: { page: 1, limit: 50, total: 0, status: 'pending' },
@@ -3306,7 +3312,8 @@
                 try {
                     const s = this.usersMeta.search ? `&search=${encodeURIComponent(this.usersMeta.search)}` : '';
                     const f = this.usersMeta.filter !== 'all' ? `&is_pro=${this.usersMeta.filter === 'pro'}` : '';
-                    const data = await this.api(`/api/admin/users?page=${this.usersMeta.page}&limit=${this.usersMeta.limit}${s}${f}`);
+                    const cr = this.usersMeta.creditRange ? `&credit_range=${encodeURIComponent(this.usersMeta.creditRange)}` : '';
+                    const data = await this.api(`/api/admin/users?page=${this.usersMeta.page}&limit=${this.usersMeta.limit}${s}${f}${cr}`);
                     this.userList = data.users || [];
                     this.usersMeta.total = data.total || 0;
                 } catch(e) { this.showToast('Failed to load users', 'error'); }
