@@ -390,6 +390,14 @@ func (h *AdminHandler) ListUsers(c *fiber.Ctx) error {
 	} else if isPro == "false" {
 		query = query.Where("is_pro = ?", false)
 	}
+	creditRange := c.Query("credit_range")
+	if creditRange == "0-50" {
+		query = query.Where("credits >= ? AND credits <= ?", 0, 50)
+	} else if creditRange == "50-100" {
+		query = query.Where("credits > ? AND credits <= ?", 50, 100)
+	} else if creditRange == "100+" {
+		query = query.Where("credits > ?", 100)
+	}
 	query.Count(&total)
 	query.Order("created_at desc").Offset(offset).Limit(limit).Find(&users)
 
