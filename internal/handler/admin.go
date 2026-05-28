@@ -124,6 +124,17 @@ func (h *AdminHandler) GetRevenueDetailed(c *fiber.Ctx) error {
 		Order("day asc").
 		Scan(&last30Days)
 
+	var last30DaysUsers []struct {
+		Day   string `json:"day"`
+		Count int64  `json:"count"`
+	}
+	db.Model(&model.User{}).
+		Select("DATE(created_at) as day, COUNT(*) as count").
+		Where("created_at >= ?", today.AddDate(0, 0, -30)).
+		Group("DATE(created_at)").
+		Order("day asc").
+		Scan(&last30DaysUsers)
+
 	revenue, revErr := h.revenuecat.GetOverview(c.Context())
 	if revErr != nil {
 		fmt.Printf("[Admin] RevenueCat overview error: %v\n", revErr)
@@ -149,7 +160,8 @@ func (h *AdminHandler) GetRevenueDetailed(c *fiber.Ctx) error {
 			"pro":   proUsers,
 			"free":  userTotal - proUsers,
 		},
-		"chart_data": last30Days,
+		"chart_data":    last30Days,
+		"user_signups":  last30DaysUsers,
 	})
 }
 

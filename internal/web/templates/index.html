@@ -582,6 +582,17 @@
                         </div>
                     </div>
 
+                    <!-- Daily New Users Chart -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mt-6">
+                        <h3 class="font-semibold mb-4">Daily new users (last 30 days)</h3>
+                        <div class="h-72">
+                            <canvas id="signupChart"></canvas>
+                        </div>
+                        <div x-show="!revenueData?.user_signups?.length" class="text-center text-gray-500 py-8">
+                            No data yet
+                        </div>
+                    </div>
+
                     <!-- User Breakdown -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                         <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
@@ -3579,7 +3590,7 @@
                 try {
                     const data = await this.api('/api/admin/stats/revenue-detailed');
                     this.revenueData = data;
-                    this.$nextTick(() => this.renderRevenueChart());
+                    this.$nextTick(() => { this.renderRevenueChart(); this.renderSignupChart(); });
                 } catch(e) {
                     console.error('Revenue fetch error:', e);
                     this.showToast('Failed to load revenue data', 'error');
@@ -3781,7 +3792,7 @@
                     if (!d || !d.day) return '';
                     const dt = new Date(d.day);
                     if (isNaN(dt.getTime())) return d.day;
-                    return dt.toLocaleDateString('tr-TR', { day:'2-digit', month:'short' });
+                    return dt.toLocaleDateString('en-US', { day:'2-digit', month:'short' });
                 }).filter(Boolean);
                 const values = chartData.map(d => Number(d.count) || 0);
 
@@ -3796,6 +3807,61 @@
                             data: values,
                             backgroundColor: 'rgba(99, 102, 241, 0.5)',
                             borderColor: '#6366f1',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#6b7280', font: { size: 10 } }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#6b7280', precision: 0 },
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            },
+
+            renderSignupChart() {
+                const chartData = this.revenueData?.user_signups;
+                if (!chartData || !Array.isArray(chartData) || chartData.length === 0) return;
+
+                const canvas = document.getElementById('signupChart');
+                if (!canvas) return;
+
+                if (this.signupChart) {
+                    try { this.signupChart.destroy(); } catch(e) {}
+                }
+
+                const labels = chartData.map(d => {
+                    if (!d || !d.day) return '';
+                    const dt = new Date(d.day);
+                    if (isNaN(dt.getTime())) return d.day;
+                    return dt.toLocaleDateString('en-US', { day:'2-digit', month:'short' });
+                }).filter(Boolean);
+                const values = chartData.map(d => Number(d.count) || 0);
+
+                if (labels.length === 0) return;
+
+                this.signupChart = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'New users',
+                            data: values,
+                            backgroundColor: 'rgba(16, 185, 129, 0.5)',
+                            borderColor: '#10b981',
                             borderWidth: 1,
                             borderRadius: 4
                         }]
