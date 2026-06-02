@@ -283,7 +283,8 @@
                     <p>No users yet</p>
                 </div>
 
-                <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden overflow-x-auto" x-show="userList.length">
+                <!-- Desktop Table -->
+                <div class="hidden md:block bg-gray-900 border border-gray-800 rounded-xl overflow-hidden overflow-x-auto" x-show="userList.length">
                     <table class="w-full text-sm min-w-[900px]">
                         <thead class="border-b border-gray-800 bg-gray-900/50">
                             <tr>
@@ -352,6 +353,63 @@
                     </table>
                 </div>
 
+                <!-- Mobile Cards -->
+                <div class="md:hidden space-y-3" x-show="userList.length">
+                    <template x-for="u in userList" :key="u.id">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <img :src="u.photo_url || ''" class="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 object-cover" referrerpolicy="no-referrer" onerror="this.style.display='none'">
+                                    <div class="min-w-0">
+                                        <p class="font-medium text-sm truncate" :class="u.is_banned ? 'text-red-400 line-through' : ''" x-text="u.name || '—'"></p>
+                                        <p class="text-xs text-gray-500 truncate" x-text="u.email"></p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                                    <span x-show="u.is_banned" class="px-2 py-0.5 rounded text-[10px] font-medium bg-red-500/10 text-red-400">ENGEL</span>
+                                    <span x-show="!u.is_banned" class="px-2 py-0.5 rounded text-[10px] font-medium" :class="u.is_pro ? 'bg-yellow-500/10 text-yellow-400' : 'bg-gray-700 text-gray-500'" x-text="u.is_pro ? 'PRO' : 'FREE'"></span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div class="bg-gray-800/50 rounded-lg p-2">
+                                    <p class="text-gray-500">Credits</p>
+                                    <p class="font-mono font-semibold" :class="u.credits > 0 ? 'text-green-400' : 'text-red-400'" x-text="u.credits"></p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2">
+                                    <p class="text-gray-500">Usage</p>
+                                    <p class="text-gray-300" x-text="u.total_usage"></p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2 col-span-2">
+                                    <p class="text-gray-500">UID</p>
+                                    <code class="text-xs text-gray-400" x-text="u.firebase_uid"></code>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2 col-span-2" x-show="u.device_id">
+                                    <p class="text-gray-500">Device ID</p>
+                                    <code class="text-xs text-gray-500" x-text="u.device_id"></code>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-800">
+                                <button @click="openEditUser(u)" class="flex-1 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    Edit
+                                </button>
+                                <button @click="banUserDevice(u)" x-show="u.device_id && !u.device_ban_id" class="flex-1 px-3 py-2 rounded-lg text-xs font-medium transition bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 inline-flex items-center justify-center gap-1">
+                                    Ban Device
+                                </button>
+                                <button @click="unbanDevice(u.device_ban_id)" x-show="u.device_ban_id" class="flex-1 px-3 py-2 rounded-lg text-xs font-medium transition bg-green-600/20 hover:bg-green-600/30 text-green-400 inline-flex items-center justify-center gap-1">
+                                    Unban Device
+                                </button>
+                                <button @click="toggleBanUser(u)" class="flex-1 px-3 py-2 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1" :class="u.is_banned ? 'bg-green-600/20 hover:bg-green-600/30 text-green-400' : 'bg-red-600/20 hover:bg-red-600/30 text-red-400'">
+                                    <span x-text="u.is_banned ? 'Unban' : 'Ban'"></span>
+                                </button>
+                                <button @click="deleteUser(u)" class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
                 <div class="flex items-center justify-between mt-4" x-show="usersMeta.total > 0">
                     <p class="text-sm text-gray-500">Total <span x-text="usersMeta.total"></span> users</p>
                     <div class="flex gap-2">
@@ -382,7 +440,8 @@
                     <p>No deletion requests yet</p>
                 </div>
 
-                <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden overflow-x-auto" x-show="deletionRequests.length">
+                <!-- Desktop Table -->
+                <div class="hidden md:block bg-gray-900 border border-gray-800 rounded-xl overflow-hidden overflow-x-auto" x-show="deletionRequests.length">
                     <table class="w-full text-sm min-w-[800px]">
                         <thead class="border-b border-gray-800 bg-gray-900/50">
                             <tr>
@@ -430,6 +489,48 @@
                     </table>
                 </div>
 
+                <!-- Mobile Cards -->
+                <div class="md:hidden space-y-3" x-show="deletionRequests.length">
+                    <template x-for="r in deletionRequests" :key="r.id">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+                            <div class="flex items-start justify-between">
+                                <div class="min-w-0">
+                                    <p class="font-medium text-sm" x-text="r.user_name || '—'"></p>
+                                    <p class="text-xs text-gray-500 truncate" x-text="r.user_email || '—'"></p>
+                                </div>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-medium flex-shrink-0"
+                                    :class="r.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400' : r.status === 'approved' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'"
+                                    x-text="r.status.toUpperCase()"></span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div class="bg-gray-800/50 rounded-lg p-2">
+                                    <p class="text-gray-500">ID</p>
+                                    <p class="text-gray-400" x-text="'#' + r.id"></p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2">
+                                    <p class="text-gray-500">Credits</p>
+                                    <p class="font-mono font-semibold" :class="r.user_credits > 0 ? 'text-green-400' : 'text-red-400'" x-text="r.user_credits"></p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2 col-span-2">
+                                    <p class="text-gray-500">Firebase UID</p>
+                                    <code class="text-xs text-gray-400" x-text="r.firebase_uid"></code>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2 col-span-2">
+                                    <p class="text-gray-500">Requested</p>
+                                    <p class="text-gray-400" x-text="formatDate(r.requested_at)"></p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 pt-2 border-t border-gray-800" x-show="r.status === 'pending'">
+                                <button @click="approveDeletion(r.id)" class="flex-1 px-3 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg text-xs font-medium transition">Approve</button>
+                                <button @click="rejectDeletion(r.id)" class="flex-1 px-3 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-xs font-medium transition">Reject</button>
+                            </div>
+                            <div class="pt-2 border-t border-gray-800 text-xs text-gray-500 text-center" x-show="r.status !== 'pending'">
+                                <span x-text="r.processed_by ? ('Processed by ' + r.processed_by) : '—'"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
                 <div class="flex items-center justify-between mt-4" x-show="deletionMeta.total > 0">
                     <p class="text-sm text-gray-500">Total <span x-text="deletionMeta.total"></span> requests</p>
                     <div class="flex gap-2">
@@ -452,7 +553,8 @@
                     <p>No banned devices</p>
                 </div>
 
-                <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden overflow-x-auto" x-show="bannedDevices.length">
+                <!-- Desktop Table -->
+                <div class="hidden md:block bg-gray-900 border border-gray-800 rounded-xl overflow-hidden overflow-x-auto" x-show="bannedDevices.length">
                     <table class="w-full text-sm min-w-[700px]">
                         <thead class="border-b border-gray-800 bg-gray-900/50">
                             <tr>
@@ -481,6 +583,37 @@
                             </template>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Mobile Cards -->
+                <div class="md:hidden space-y-3" x-show="bannedDevices.length">
+                    <template x-for="b in bannedDevices" :key="b.id">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+                            <div class="flex items-start justify-between">
+                                <div class="min-w-0">
+                                    <p class="text-gray-400 text-xs" x-text="'#' + b.id"></p>
+                                    <code class="text-xs text-gray-300 break-all" x-text="b.device_id"></code>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div class="bg-gray-800/50 rounded-lg p-2">
+                                    <p class="text-gray-500">Reason</p>
+                                    <p class="text-gray-300" x-text="b.reason || '—'"></p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2">
+                                    <p class="text-gray-500">Banned By</p>
+                                    <p class="text-gray-400" x-text="b.banned_by || '—'"></p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2 col-span-2">
+                                    <p class="text-gray-500">Date</p>
+                                    <p class="text-gray-400" x-text="formatDate(b.created_at)"></p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 pt-2 border-t border-gray-800">
+                                <button @click="unbanDevice(b.id)" class="w-full px-3 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg text-xs font-medium transition">Unban Device</button>
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
                 <div class="flex items-center justify-between mt-4" x-show="bannedDevicesMeta.total > 0">
@@ -702,7 +835,8 @@
                     </button>
                 </div>
 
-                <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                <!-- Desktop Table -->
+                <div class="hidden md:block bg-gray-900 border border-gray-800 rounded-xl overflow-hidden" x-show="logs.length">
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-800/50">
@@ -760,30 +894,79 @@
                                         <td class="px-4 py-3 text-gray-400 whitespace-nowrap" x-text="log.duration_ms + 'ms'"></td>
                                     </tr>
                                 </template>
-                                <tr x-show="!logs.length">
-                                    <td colspan="9" class="px-4 py-12 text-center text-gray-500">No logs yet</td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
+                </div>
 
-                    <!-- Pagination -->
-                    <div x-show="logsMeta.total > logsMeta.limit" class="flex items-center justify-between px-4 py-3 border-t border-gray-800">
-                        <p class="text-sm text-gray-500">
-                            Total <span x-text="logsMeta.total"></span> records
-                        </p>
-                        <div class="flex items-center gap-2">
-                            <button @click="logsMeta.page--; fetchLogs()" :disabled="logsMeta.page <= 1"
-                                class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Previous</button>
-                            <template x-for="p in logPages()" :key="p.key">
-                                <span x-show="p.n === '...'" class="px-2 text-sm text-gray-500">...</span>
-                                <button x-show="p.n !== '...'" @click="logsMeta.page = p.n; fetchLogs()"
-                                    :class="logsMeta.page === p.n ? 'bg-brand-600 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'"
-                                    class="px-3 py-1 rounded text-sm transition" x-text="p.n"></button>
-                            </template>
-                            <button @click="logsMeta.page++; fetchLogs()" :disabled="logsMeta.page * logsMeta.limit >= logsMeta.total"
-                                class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Next</button>
+                <!-- Mobile Cards -->
+                <div class="md:hidden space-y-3" x-show="logs.length">
+                    <template x-for="log in logs" :key="log.id">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" :value="log.id" x-model="selectedLogIds" class="w-4 h-4 rounded bg-gray-800 border-gray-600 text-brand-600 focus:ring-brand-500">
+                                    <span class="text-xs text-gray-300" x-text="formatDate(log.created_at)"></span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded text-xs font-medium"
+                                    :class="log.status === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'"
+                                    x-text="log.status"></span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div class="bg-gray-800/50 rounded-lg p-2">
+                                    <p class="text-gray-500">Provider</p>
+                                    <span class="px-2 py-0.5 bg-brand-500/10 text-brand-400 rounded text-xs font-medium" x-text="log.provider"></span>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2">
+                                    <p class="text-gray-500">Duration</p>
+                                    <p class="text-gray-400" x-text="log.duration_ms + 'ms'"></p>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2 col-span-2">
+                                    <p class="text-gray-500">UID</p>
+                                    <code class="text-xs text-gray-400" x-text="log.firebase_uid || '—'"></code>
+                                </div>
+                                <div class="bg-gray-800/50 rounded-lg p-2 col-span-2" x-show="log.model">
+                                    <p class="text-gray-500">Model</p>
+                                    <p class="text-gray-400" x-text="log.model"></p>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button x-show="log.image_url" @click="sideImage = log.image_url" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs text-gray-300 transition">
+                                    Before
+                                </button>
+                                <button x-show="log.result_url" @click="sideImage = log.result_url" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs text-gray-300 transition">
+                                    After
+                                </button>
+                                <button @click="navigator.clipboard.writeText(log.prompt || ''); showToast('Prompt kopyalandı', 'success')" 
+                                    class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs text-gray-300 transition">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                    <span>Copy prompt</span>
+                                </button>
+                            </div>
                         </div>
+                    </template>
+                </div>
+
+                <div x-show="!logs.length" class="text-center text-gray-500 py-16 bg-gray-900 border border-gray-800 rounded-xl">
+                    <p>No logs yet</p>
+                </div>
+
+                <!-- Pagination -->
+                <div x-show="logsMeta.total > logsMeta.limit" class="flex items-center justify-between px-4 py-3 border-t border-gray-800 mt-4 bg-gray-900 border border-gray-800 rounded-xl">
+                    <p class="text-sm text-gray-500">
+                        Total <span x-text="logsMeta.total"></span> records
+                    </p>
+                    <div class="flex items-center gap-2">
+                        <button @click="logsMeta.page--; fetchLogs()" :disabled="logsMeta.page <= 1"
+                            class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Previous</button>
+                        <template x-for="p in logPages()" :key="p.key">
+                            <span x-show="p.n === '...'" class="px-2 text-sm text-gray-500">...</span>
+                            <button x-show="p.n !== '...'" @click="logsMeta.page = p.n; fetchLogs()"
+                                :class="logsMeta.page === p.n ? 'bg-brand-600 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'"
+                                class="px-3 py-1 rounded text-sm transition" x-text="p.n"></button>
+                        </template>
+                        <button @click="logsMeta.page++; fetchLogs()" :disabled="logsMeta.page * logsMeta.limit >= logsMeta.total"
+                            class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-30 rounded text-sm transition">Next</button>
                     </div>
                 </div>
             </div>
@@ -964,8 +1147,8 @@
                 <p class="text-sm text-gray-500 mb-6">Manage the AI templates shown in the mobile app. Each template includes a prompt, demo media, and provider settings.</p>
 
                 <!-- Template Form Modal -->
-                <div x-show="templateForm" class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center pt-10 overflow-y-auto" @click.self="templateForm = null">
-                    <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-2xl mb-10 shadow-2xl">
+                <div x-show="templateForm" class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center px-4 pt-6 md:pt-10 overflow-y-auto" @click.self="templateForm = null">
+                    <div class="bg-gray-900 border border-gray-700 rounded-2xl p-4 md:p-6 w-full max-w-2xl mb-10 shadow-2xl">
                         <div class="flex items-center justify-between mb-5">
                         <h2 class="text-xl font-bold" x-text="templateForm?.id ? 'Edit template' : 'New template'"></h2>
                         <div class="flex items-center gap-2">
@@ -1256,18 +1439,18 @@
 
                 <div class="grid gap-4">
                     <template x-for="t in templates" :key="t.id">
-                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 md:p-5">
                             <div class="flex flex-col md:flex-row items-start justify-between gap-4">
-                                <div class="flex items-start gap-4">
-                                    <div class="w-16 h-16 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
+                                <div class="flex items-start gap-3 md:gap-4 w-full">
+                                    <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0">
                                         <img x-show="t.after_media_url && t.after_media_type!=='video'" :src="t.after_media_url" class="w-full h-full object-cover">
                                         <video x-show="t.after_media_url && t.after_media_type==='video'" :src="t.after_media_url" class="w-full h-full object-cover" muted></video>
                                         <img x-show="!t.after_media_url && t.before_media_url && t.before_media_type!=='video'" :src="t.before_media_url" class="w-full h-full object-cover">
                                         <video x-show="!t.after_media_url && t.before_media_url && t.before_media_type==='video'" :src="t.before_media_url" class="w-full h-full object-cover" muted></video>
-                                        <div x-show="!t.after_media_url && !t.before_media_url" class="w-full h-full flex items-center justify-center text-gray-600 text-xl font-bold" x-text="t.name?.charAt(0)?.toUpperCase()"></div>
+                                        <div x-show="!t.after_media_url && !t.before_media_url" class="w-full h-full flex items-center justify-center text-gray-600 text-lg md:text-xl font-bold" x-text="t.name?.charAt(0)?.toUpperCase()"></div>
                                     </div>
-                                    <div>
-                                        <h3 class="font-semibold flex items-center gap-2 flex-wrap">
+                                    <div class="min-w-0 flex-1">
+                                        <h3 class="font-semibold flex items-center gap-1.5 md:gap-2 flex-wrap text-sm md:text-base">
                                             <span class="text-gray-500 text-xs font-normal mr-1" x-text="'#' + (t.sort_order ?? 0)"></span>
                                             <span x-text="t.name"></span>
                                             <span class="px-1.5 py-0.5 rounded text-[10px] font-medium" :class="t.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'" x-text="t.is_active ? 'ACTIVE' : 'INACTIVE'"></span>
@@ -1279,8 +1462,8 @@
                                             <span x-show="t.aspect_ratio" class="px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded text-[10px] font-medium" x-text="t.aspect_ratio || '1:1'"></span>
                                             <span x-show="t.require_mom_photo || t.require_baby_photo || t.require_dad_photo" class="px-1.5 py-0.5 bg-pink-500/10 text-pink-400 rounded text-[10px] font-medium">FAMILY</span>
                                         </h3>
-                                        <p class="text-sm text-gray-400 mt-0.5" x-text="t.description || t.prompt.substring(0, 80) + '...'"></p>
-                                        <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                                        <p class="text-xs md:text-sm text-gray-400 mt-1 line-clamp-2" x-text="t.description || t.prompt.substring(0, 80) + '...'"></p>
+                                        <div class="flex flex-col md:flex-row md:flex-wrap md:items-center gap-1 md:gap-3 mt-2 text-xs text-gray-500">
                                             <span x-text="'Provider: ' + (t.provider || '—')"></span>
                                             <span x-show="t.category_id" x-text="'Category: ' + (allCategories.find(c=>c.id===t.category_id)?.name || t.category_id)"></span>
                                             <span x-text="'Slug: ' + t.slug" class="text-gray-600"></span>
@@ -1295,13 +1478,13 @@
                                         </div>
                                         <div x-show="t.reference_video_url" class="flex items-center gap-2 mt-1">
                                             <span class="px-1.5 py-0.5 bg-orange-500/10 text-orange-400 rounded text-[10px] font-medium">REF VIDEO</span>
-                                            <a :href="t.reference_video_url" target="_blank" class="text-[10px] text-gray-500 hover:text-brand-400 truncate max-w-[200px]" x-text="t.reference_video_url"></a>
+                                            <a :href="t.reference_video_url" target="_blank" class="text-[10px] text-gray-500 hover:text-brand-400 truncate max-w-[120px] md:max-w-[200px]" x-text="t.reference_video_url"></a>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 flex-shrink-0">
-                                    <button @click="editTemplate(t)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition">Edit</button>
-                                    <button @click="deleteTemplate(t.id)" class="px-3 py-1.5 bg-red-900/30 hover:bg-red-900/60 text-red-400 rounded-lg text-xs font-medium transition">Delete</button>
+                                <div class="flex items-center gap-2 flex-shrink-0 w-full md:w-auto">
+                                    <button @click="editTemplate(t)" class="flex-1 md:flex-none px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition text-center">Edit</button>
+                                    <button @click="deleteTemplate(t.id)" class="flex-1 md:flex-none px-3 py-1.5 bg-red-900/30 hover:bg-red-900/60 text-red-400 rounded-lg text-xs font-medium transition text-center">Delete</button>
                                 </div>
                             </div>
                         </div>
@@ -2304,7 +2487,8 @@
                 </div>
 
                 <div x-show="!reportsLoading">
-                    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden overflow-x-auto">
+                    <!-- Desktop Table -->
+                    <div class="hidden md:block bg-gray-900 border border-gray-800 rounded-xl overflow-hidden overflow-x-auto">
                         <table class="w-full text-sm text-left min-w-[800px]">
                             <thead class="bg-gray-800 text-gray-400">
                                 <tr>
@@ -2335,14 +2519,41 @@
                                         </td>
                                     </tr>
                                 </template>
-                                <tr x-show="reports.length === 0">
-                                    <td colspan="7" class="px-4 py-12 text-center text-gray-500">
-                                        <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                        <p class="text-sm">No reports yet.</p>
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Mobile Cards -->
+                    <div class="md:hidden space-y-3">
+                        <template x-for="r in reports" :key="r.id">
+                            <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-gray-500 text-xs" x-text="'#' + r.id"></span>
+                                        <span class="px-2 py-1 bg-red-900/30 text-red-400 rounded-md text-xs font-medium" x-text="r.reason"></span>
+                                    </div>
+                                    <span class="text-xs text-gray-500" x-text="formatDate(r.created_at)"></span>
+                                </div>
+                                <div x-show="r.details" class="text-sm text-gray-300 bg-gray-800/50 rounded-lg p-2">
+                                    <p x-text="r.details"></p>
+                                </div>
+                                <div x-show="r.result_url" class="text-xs">
+                                    <p class="text-gray-500 mb-1">Result URL</p>
+                                    <a :href="r.result_url" target="_blank" class="text-brand-400 hover:text-brand-300 underline break-all" x-text="r.result_url"></a>
+                                </div>
+                                <div class="text-xs">
+                                    <p class="text-gray-500">User</p>
+                                    <p class="text-gray-400 font-mono" x-text="r.firebase_uid || 'Anonymous'"></p>
+                                </div>
+                                <div class="flex gap-2 pt-2 border-t border-gray-800">
+                                    <button @click="deleteReport(r.id)" class="w-full px-3 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg text-xs font-medium transition">Delete Report</button>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="reports.length === 0" class="text-center text-gray-500 py-16 bg-gray-900 border border-gray-800 rounded-xl">
+                            <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <p class="text-sm">No reports yet.</p>
+                        </div>
                     </div>
                 </div>
             </div>
