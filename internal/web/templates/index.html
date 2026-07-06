@@ -20,7 +20,42 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' }
+                        brand: {
+                            50: '#faf7f5',
+                            100: '#f0e8e1',
+                            200: '#e1d0c1',
+                            300: '#cbaf97',
+                            400: '#b0886a',
+                            500: '#966c4c',
+                            600: '#785135',
+                            700: '#5d3e28',
+                            800: '#422b1c',
+                            900: '#2c1b10'
+                        },
+                        blue: {
+                            50: '#faf7f5',
+                            100: '#f0e8e1',
+                            200: '#e1d0c1',
+                            300: '#cbaf97',
+                            400: '#b0886a',
+                            500: '#966c4c',
+                            600: '#785135',
+                            700: '#5d3e28',
+                            800: '#422b1c',
+                            900: '#2c1b10'
+                        },
+                        purple: {
+                            50: '#faf7f5',
+                            100: '#f0e8e1',
+                            200: '#e1d0c1',
+                            300: '#cbaf97',
+                            400: '#b0886a',
+                            500: '#966c4c',
+                            600: '#785135',
+                            700: '#5d3e28',
+                            800: '#422b1c',
+                            900: '#2c1b10'
+                        }
                     }
                 }
             }
@@ -34,8 +69,8 @@
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #1e1b4b; }
-        ::-webkit-scrollbar-thumb { background: #4338ca; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: #2c1b10; }
+        ::-webkit-scrollbar-thumb { background: #5d3e28; border-radius: 3px; }
     </style>
     <script>
         // Global fallback for broken images
@@ -2451,9 +2486,9 @@
                                             <button @click="note.color = ''; saveNote(note); open = false" class="w-6 h-6 rounded bg-gray-600 hover:ring-2 ring-white transition" title="Default"></button>
                                             <button @click="note.color = 'yellow'; saveNote(note); open = false" class="w-6 h-6 rounded bg-yellow-500 hover:ring-2 ring-white transition" title="Yellow"></button>
                                             <button @click="note.color = 'green'; saveNote(note); open = false" class="w-6 h-6 rounded bg-green-500 hover:ring-2 ring-white transition" title="Green"></button>
-                                            <button @click="note.color = 'blue'; saveNote(note); open = false" class="w-6 h-6 rounded bg-blue-500 hover:ring-2 ring-white transition" title="Blue"></button>
+                                            <button @click="note.color = 'blue'; saveNote(note); open = false" class="w-6 h-6 rounded bg-blue-500 hover:ring-2 ring-white transition" title="Brown"></button>
                                             <button @click="note.color = 'red'; saveNote(note); open = false" class="w-6 h-6 rounded bg-red-500 hover:ring-2 ring-white transition" title="Red"></button>
-                                            <button @click="note.color = 'purple'; saveNote(note); open = false" class="w-6 h-6 rounded bg-purple-500 hover:ring-2 ring-white transition" title="Purple"></button>
+                                            <button @click="note.color = 'purple'; saveNote(note); open = false" class="w-6 h-6 rounded bg-purple-500 hover:ring-2 ring-white transition" title="Dark Brown"></button>
                                         </div>
                                     </div>
                                     <button @click="deleteNote(note.id)" class="p-1 hover:bg-red-900/50 rounded transition text-gray-400 hover:text-red-400" title="Delete">
@@ -3772,7 +3807,7 @@
 
                 if (this.providerChart) this.providerChart.destroy();
 
-                const colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6'];
+                const colors = ['#966c4c','#785135','#ec4899','#f59e0b','#10b981','#5d3e28'];
                 this.providerChart = new Chart(canvas, {
                     type: 'doughnut',
                     data: {
@@ -4016,8 +4051,8 @@
                         datasets: [{
                             label: 'Usage',
                             data: values,
-                            backgroundColor: 'rgba(99, 102, 241, 0.5)',
-                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(150, 108, 76, 0.5)',
+                            borderColor: '#966c4c',
                             borderWidth: 1,
                             borderRadius: 4
                         }]
