@@ -5,14 +5,14 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/ozgurulukan/bubsiebackend/internal/config"
-	"github.com/ozgurulukan/bubsiebackend/internal/handler"
-	"github.com/ozgurulukan/bubsiebackend/internal/middleware"
-	"github.com/ozgurulukan/bubsiebackend/internal/model"
-	"github.com/ozgurulukan/bubsiebackend/internal/service"
-	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
-	"github.com/ozgurulukan/bubsiebackend/internal/service/storage"
-	"github.com/ozgurulukan/bubsiebackend/internal/web"
+	"github.com/ozgurulukan/babyultrabackend/internal/config"
+	"github.com/ozgurulukan/babyultrabackend/internal/handler"
+	"github.com/ozgurulukan/babyultrabackend/internal/middleware"
+	"github.com/ozgurulukan/babyultrabackend/internal/model"
+	"github.com/ozgurulukan/babyultrabackend/internal/service"
+	"github.com/ozgurulukan/babyultrabackend/internal/service/provider"
+	"github.com/ozgurulukan/babyultrabackend/internal/service/storage"
+	"github.com/ozgurulukan/babyultrabackend/internal/web"
 )
 
 func Setup(

@@ -1,4 +1,4 @@
-# Bubsie Api
+# BabyUltra Api
 
 Mobil AI uygulamaları (iOS/Android) icin merkezi proxy, guvenlik ve yonetim katmani.
 Bu dosya mobil uygulama gelistirirken referans belgesi olarak kullanilir.
@@ -14,7 +14,7 @@ iOS/Android App
     │  idToken al
     │
     ▼
-Bubsie Api (Go / Fiber v2)  ──────────────────────────────────────────
+BabyUltra Api (Go / Fiber v2)  ──────────────────────────────────────────
     │                                                                │
     ├─ [Auth Middleware]                                              │
     │   ├─ Mobil API: Firebase Admin SDK (service account)           │
@@ -103,7 +103,7 @@ Bubsie Api (Go / Fiber v2)  ─────────────────�
 ## Proje Yapisi
 
 ```
-bubsiebackend/
+babyultrabackend/
 ├── cmd/server/
 │   └── main.go                    # Entry point, Fiber config, graceful shutdown
 ├── internal/
@@ -1739,7 +1739,7 @@ func userNotificationCenter(_ center: UNUserNotificationCenter,
 2. Build Pack: **Dockerfile** sec
 3. Port: **3000**
 4. Environment Variables ekle (yukaridaki tablo)
-5. Volume Mount: `bubsiebackend-data` -> `/app/data` (SQLite kaliciligi)
+5. Volume Mount: `babyultrabackend-data` -> `/app/data` (SQLite kaliciligi)
 6. Firebase SA gerekiyorsa: Storage mount ile `/app/firebase-service-account.json`
 7. Auto-deploy: main branch'e push = otomatik deploy
 

@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/ozgurulukan/bubsiebackend/internal/config"
-	"github.com/ozgurulukan/bubsiebackend/internal/database"
-	"github.com/ozgurulukan/bubsiebackend/internal/model"
-	"github.com/ozgurulukan/bubsiebackend/internal/service"
-	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
+	"github.com/ozgurulukan/babyultrabackend/internal/config"
+	"github.com/ozgurulukan/babyultrabackend/internal/database"
+	"github.com/ozgurulukan/babyultrabackend/internal/model"
+	"github.com/ozgurulukan/babyultrabackend/internal/service"
+	"github.com/ozgurulukan/babyultrabackend/internal/service/provider"
 )
 
 var allProviderNames = []string{"fal.ai", "replicate", "deepseek", "openrouter", "gemini"}

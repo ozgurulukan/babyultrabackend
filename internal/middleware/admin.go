@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/ozgurulukan/bubsiebackend/internal/model"
+	"github.com/ozgurulukan/babyultrabackend/internal/model"
 )
 
 func AdminOnly(adminEmail string) fiber.Handler {

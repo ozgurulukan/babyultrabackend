@@ -8,16 +8,16 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/ozgurulukan/bubsiebackend/internal/config"
-	"github.com/ozgurulukan/bubsiebackend/internal/database"
-	"github.com/ozgurulukan/bubsiebackend/internal/router"
-	"github.com/ozgurulukan/bubsiebackend/internal/service"
-	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
-	"github.com/ozgurulukan/bubsiebackend/internal/service/storage"
+	"github.com/ozgurulukan/babyultrabackend/internal/config"
+	"github.com/ozgurulukan/babyultrabackend/internal/database"
+	"github.com/ozgurulukan/babyultrabackend/internal/router"
+	"github.com/ozgurulukan/babyultrabackend/internal/service"
+	"github.com/ozgurulukan/babyultrabackend/internal/service/provider"
+	"github.com/ozgurulukan/babyultrabackend/internal/service/storage"
 )
 
 func main() {
-	log.Println("Starting Bubsie Api...")
+	log.Println("Starting BabyUltra Api...")
 
 	cfg := config.Load()
 
@@ -43,7 +43,7 @@ func main() {
 	)
 
 	app := fiber.New(fiber.Config{
-		AppName:       "Bubsie Api",
+		AppName:       "BabyUltra Api",
 		ServerHeader:  "",
 		BodyLimit:     50 * 1024 * 1024,
 		ReadTimeout:   360 * time.Second,

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ozgurulukan/bubsiebackend/internal/config"
+	"github.com/ozgurulukan/babyultrabackend/internal/config"
 )
 
 type TransformInput struct {

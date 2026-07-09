@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/ozgurulukan/bubsiebackend/internal/model"
+	"github.com/ozgurulukan/babyultrabackend/internal/model"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -18,7 +18,7 @@ func Connect() {
 	}
 
 	var err error
-	DB, err = gorm.Open(sqlite.Open("data/bubsiebackend.db"), &gorm.Config{
+	DB, err = gorm.Open(sqlite.Open("data/babyultrabackend.db"), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {

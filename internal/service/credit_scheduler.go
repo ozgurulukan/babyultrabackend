@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/ozgurulukan/bubsiebackend/internal/database"
-	"github.com/ozgurulukan/bubsiebackend/internal/model"
+	"github.com/ozgurulukan/babyultrabackend/internal/database"
+	"github.com/ozgurulukan/babyultrabackend/internal/model"
 	"gorm.io/gorm"
 )
 

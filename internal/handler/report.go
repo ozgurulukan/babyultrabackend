@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/ozgurulukan/bubsiebackend/internal/database"
-	"github.com/ozgurulukan/bubsiebackend/internal/model"
+	"github.com/ozgurulukan/babyultrabackend/internal/database"
+	"github.com/ozgurulukan/babyultrabackend/internal/model"
 )
 
 type ReportHandler struct{}

@@ -1,9 +1,9 @@
 version: "3.8"
 
 services:
-  bubsiebackend:
+  babyultrabackend:
     build: .
-    container_name: bubsie-api
+    container_name: babyultra-api
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"

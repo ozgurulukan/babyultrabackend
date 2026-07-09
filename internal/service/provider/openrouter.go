@@ -68,7 +68,7 @@ func (o *OpenRouter) Transform(ctx context.Context, input *TransformInput) (*Tra
 
 	req.Header.Set("Authorization", "Bearer "+o.apiKey)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("HTTP-Referer", "https://github.com/ozgurulukan/bubsiebackend")
+	req.Header.Set("HTTP-Referer", "https://github.com/ozgurulukan/babyultrabackend")
 
 	resp, err := o.client.Do(req)
 	if err != nil {

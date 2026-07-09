@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bubsie Api — Admin Panel</title>
+    <title>BabyUltra Api — Admin Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"
             integrity="sha384-sEVIly94UBRLKWdkYoPpSG7GD/e79YHMrxVyZaOk712Ga7+EAw6w1EFi+xBzBdd+" crossorigin="anonymous"></script>
@@ -127,7 +127,7 @@
             <div class="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
-            <h1 class="text-2xl font-bold mb-2">Bubsie Api</h1>
+            <h1 class="text-2xl font-bold mb-2">BabyUltra Api</h1>
             <p class="text-gray-400 mb-8">Sign in to access the admin panel</p>
 
             <button @click="signInWithGoogle()"
@@ -160,7 +160,7 @@
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     </div>
                     <div>
-                        <h2 class="font-bold text-sm">Bubsie Api</h2>
+                        <h2 class="font-bold text-sm">BabyUltra Api</h2>
                         <p class="text-xs text-gray-500">Admin Panel</p>
                     </div>
                 </div>
@@ -1308,7 +1308,7 @@
 
                         <div x-show="templateTypeTab === 'other'" class="mt-4">
                             <label class="block text-xs text-gray-400 mb-1">System Prompt</label>
-                            <textarea x-model="templateForm.prompt" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Sen bir çocuk bakım uzmanısın ve Bubsie adlı uygulamanın AI ajanısın..."></textarea>
+                            <textarea x-model="templateForm.prompt" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" placeholder="Sen bir çocuk bakım uzmanısın ve BabyUltra adlı uygulamanın AI ajanısın..."></textarea>
                             <p class="text-[10px] text-gray-500 mt-1">Kullanıcının mesajlarının önüne eklenecek sistem talimatı.</p>
                         </div>
 
@@ -3306,7 +3306,7 @@
 
             applyDefaultPhotoPreset() {
                 if (!this.templateForm) return;
-                this.templateForm.app_id = 'bubsie';
+                this.templateForm.app_id = 'babyultra';
                 this.templateForm.action_type = 'image_generation';
                 this.templateForm.provider = 'fal.ai';
                 this.templateForm.model = 'fal-ai/bytedance/seedream/v4/edit';
@@ -3317,7 +3317,7 @@
 
             applyDefaultVideoPreset() {
                 if (!this.templateForm) return;
-                this.templateForm.app_id = 'bubsie';
+                this.templateForm.app_id = 'babyultra';
                 this.templateForm.action_type = 'video_generation';
                 this.templateForm.provider = 'fal.ai';
                 this.templateForm.model = 'fal-ai/kling-video/v2.6/pro/image-to-video';
@@ -3951,7 +3951,7 @@
                     "Turn your baby\u2019s photo into the trendiest dance video. Try our new template!",
                     "Discover our new \"Family Portraits\" theme. See your baby like never before!",
                     "We\u2019ve added new AI styles. Perfect for sharing with family and friends!",
-                    "Check out the latest templates added to Bubsie today.",
+                    "Check out the latest templates added to BabyUltra today.",
                     "New viral concepts are ready! Which one will you try first?",
                     "Join the latest trend and create a stunning video in seconds.",
                     "Transform your baby\u2019s photo into a masterpiece with our latest update.",
@@ -3962,7 +3962,7 @@
                 this.notifForm.title_translations = {};
                 this.notifForm.body_translations = {};
                 this.notifForm.platform = 'ios';
-                this.notifForm.app_id = 'bubsie';
+                this.notifForm.app_id = 'babyultra';
                 this.notifForm.deep_link = 'template://the-tiny-gent';
                 this.notifForm.target_uids = '';
                 this.notifResult = null;

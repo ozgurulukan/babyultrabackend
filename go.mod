@@ -1,4 +1,4 @@
-module github.com/ozgurulukan/bubsiebackend
+module github.com/ozgurulukan/babyultrabackend
 
 go 1.22
 

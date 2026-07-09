@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/ozgurulukan/bubsiebackend/internal/database"
-	"github.com/ozgurulukan/bubsiebackend/internal/model"
-	"github.com/ozgurulukan/bubsiebackend/internal/service/provider"
-	"github.com/ozgurulukan/bubsiebackend/internal/service/storage"
+	"github.com/ozgurulukan/babyultrabackend/internal/database"
+	"github.com/ozgurulukan/babyultrabackend/internal/model"
+	"github.com/ozgurulukan/babyultrabackend/internal/service/provider"
+	"github.com/ozgurulukan/babyultrabackend/internal/service/storage"
 )
 
 type PlaygroundHandler struct {

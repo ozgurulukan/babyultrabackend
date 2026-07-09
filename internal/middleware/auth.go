@@ -16,9 +16,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/ozgurulukan/bubsiebackend/internal/database"
-	"github.com/ozgurulukan/bubsiebackend/internal/model"
-	"github.com/ozgurulukan/bubsiebackend/internal/service"
+	"github.com/ozgurulukan/babyultrabackend/internal/database"
+	"github.com/ozgurulukan/babyultrabackend/internal/model"
+	"github.com/ozgurulukan/babyultrabackend/internal/service"
 	"gorm.io/gorm"
 )
 

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/ozgurulukan/bubsiebackend/internal/model"
+	"github.com/ozgurulukan/babyultrabackend/internal/model"
 )
 
 type rateLimitEntry struct {

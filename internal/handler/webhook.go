@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/ozgurulukan/bubsiebackend/internal/config"
-	"github.com/ozgurulukan/bubsiebackend/internal/database"
-	"github.com/ozgurulukan/bubsiebackend/internal/model"
+	"github.com/ozgurulukan/babyultrabackend/internal/config"
+	"github.com/ozgurulukan/babyultrabackend/internal/database"
+	"github.com/ozgurulukan/babyultrabackend/internal/model"
 	"gorm.io/gorm"
 )
 
@@ -164,11 +164,11 @@ func (h *WebhookHandler) RevenueCatWebhook(c *fiber.Ctx) error {
 
 func creditsForProduct(productID string) int {
 	switch productID {
-	case "com.fagore.bubsie.100credits":
+	case "com.fagore.BabyUltra.100credits":
 		return 100
-	case "com.fagore.bubsie.250credits":
+	case "com.fagore.BabyUltra.250credits":
 		return 250
-	case "com.fagore.bubsie.1000credits":
+	case "com.fagore.BabyUltra.1000credits":
 		return 1000
 	default:
 		return 0
@@ -177,7 +177,7 @@ func creditsForProduct(productID string) int {
 
 func isSubscriptionProduct(productID string) bool {
 	switch productID {
-	case "com.fagore.bubsie.weeklypro7", "com.fagore.bubsie.yearlypro7":
+	case "com.fagore.BabyUltra.weeklypro7", "com.fagore.BabyUltra.yearlypro7":
 		return true
 	default:
 		return false
