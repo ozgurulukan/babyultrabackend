@@ -620,7 +620,7 @@ func (h *ContentHandler) AdminUpdateTemplate(c *fiber.Ctx) error {
 		"before_media_type":  nonEmpty(updates.BeforeMediaType, existing.BeforeMediaType),
 		"after_media_url":    updates.AfterMediaURL,
 		"after_media_type":   nonEmpty(updates.AfterMediaType, existing.AfterMediaType),
-		"reference_video_url": updates.ReferenceVideoURL,
+
 		"icon_url":                updates.IconURL,
 		"aspect_ratio":            nonEmpty(updates.AspectRatio, existing.AspectRatio),
 		"supported_aspect_ratios": nonEmpty(updates.SupportedAspectRatios, existing.SupportedAspectRatios),
