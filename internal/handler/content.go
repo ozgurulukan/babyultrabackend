@@ -634,6 +634,8 @@ func (h *ContentHandler) AdminUpdateTemplate(c *fiber.Ctx) error {
 		"is_popular":       updates.IsPopular,
 		"is_viral":         updates.IsViral,
 		"is_premium":       updates.IsPremium,
+		"is_free":          updates.IsFree,
+		"hide_from_all":    updates.HideFromAll,
 		"sort_order":       updates.SortOrder,
 	})
 
