@@ -63,12 +63,7 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 			return model.ErrorResponse(c, fiber.StatusBadRequest, "image_urls must be valid HTTP(S) URLs")
 		}
 	}
-	if req.VideoURL != "" {
-		parsedURL, err := url.Parse(req.VideoURL)
-		if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
-			return model.ErrorResponse(c, fiber.StatusBadRequest, "video_url must be a valid HTTP(S) URL")
-		}
-	}
+
 
 	p, err := h.registry.Get(req.Provider)
 	if err != nil {
@@ -163,7 +158,7 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 		Model:           req.Model,
 		ImageURL:        imageURL,
 		ImageURLs:       imageURLs,
-		VideoURL:        req.VideoURL,
+
 		MomImageURL:     momImageURL,
 		BabyImageURL:    babyImageURL,
 		DadImageURL:     dadImageURL,
