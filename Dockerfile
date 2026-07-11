@@ -10,7 +10,7 @@ RUN go mod download
 COPY . .
 
 RUN go mod tidy
-RUN GOMAXPROCS=1 CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o server ./cmd/server
+RUN GOGC=off GOMAXPROCS=1 CGO_ENABLED=1 GOOS=linux go build -p 1 -ldflags="-s -w" -o server ./cmd/server
 
 FROM alpine:3.20
 
