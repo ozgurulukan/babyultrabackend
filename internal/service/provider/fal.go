@@ -48,6 +48,8 @@ func (f *FalAI) Transform(ctx context.Context, input *TransformInput) (*Transfor
 	if model == "" {
 		model = falDefaultModel
 	}
+	model = strings.TrimPrefix(model, "https://fal.ai/models/")
+	model = strings.TrimSuffix(model, "/api")
 
 	payload := buildFalPayload(model, input)
 
@@ -481,11 +483,11 @@ func isKlingMotionControlModel(model string) bool {
 }
 
 func isImageURLsModel(model string) bool {
-	return strings.Contains(model, "nano-banana") || strings.Contains(model, "gemini-image") || strings.Contains(model, "seedream")
+	return strings.Contains(model, "nano-banana") || strings.Contains(model, "gemini-image") || strings.Contains(model, "seedream") || strings.Contains(model, "gemini-3")
 }
 
 func isNativeAspectRatioModel(model string) bool {
-	return strings.Contains(model, "nano-banana") || strings.Contains(model, "gemini-image")
+	return strings.Contains(model, "nano-banana") || strings.Contains(model, "gemini-image") || strings.Contains(model, "gemini-3")
 }
 
 func isQueueModel(model string) bool {
