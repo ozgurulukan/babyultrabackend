@@ -39,8 +39,8 @@ func (h *TransformHandler) Transform(c *fiber.Ctx) error {
 		return model.ErrorResponse(c, fiber.StatusBadRequest, "invalid request body")
 	}
 
-	if req.Provider == "" || req.Prompt == "" || (req.ImageURL == "" && len(req.ImageURLs) == 0) {
-		return model.ErrorResponse(c, fiber.StatusBadRequest, "missing required fields")
+	if req.Provider == "" || req.Prompt == "" || (req.ImageURL == "" && len(req.ImageURLs) == 0 && req.MomImageURL == "" && req.DadImageURL == "") {
+		return model.ErrorResponse(c, fiber.StatusBadRequest, "missing required fields (image_url, image_urls, or mom/dad image urls)")
 	}
 
 	// Normalize multi-image input
